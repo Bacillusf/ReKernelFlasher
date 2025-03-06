@@ -9,3 +9,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+.secrets
+.env
+.github/workflows/build_local.yml
+KernelFlasher.apk
+/app/build/*

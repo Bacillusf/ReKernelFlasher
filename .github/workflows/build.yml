@@ -52,11 +52,11 @@ jobs:
           name: KernelFlasher
           path: KernelFlasher.apk
 
-      - name: Rename apk
-        run: |
-          ls -al
-          DATE=$(date +'%y.%m.%d')
-          echo "TAG=$DATE" >> $GITHUB_ENV
+      # - name: Rename apk
+      #   run: |
+      #     ls -al
+      #     DATE=$(date +'%y.%m.%d')
+      #     echo "TAG=$DATE" >> $GITHUB_ENV
 
 #      - name: Upload release
 #        uses: ncipollo/release-action@v1.14.0

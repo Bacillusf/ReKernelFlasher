@@ -65,13 +65,14 @@ class SlotViewModel(
     private val hashAlgorithm: String = "SHA-256"
     private var inInit = true
     private var _error: String? = null
+	private val _showCautionDialog: MutableState<Boolean> = mutableStateOf(false)
 
     val sha1: String?
         get() = _sha1
     val flashOutput: List<String>
         get() = _flashOutput
     val uiPrintedOutput: List<String>
-        get() = _flashOutput.filter { it.startsWith("ui_print") }.map{ it.substring("ui_print".length + 1) }
+        get() = _flashOutput.filter { it.startsWith("ui_print") }.map { it.substringAfter("ui_print").trim() }.filter { it.isNotEmpty() || it == "" }
     val wasFlashSuccess: Boolean?
         get() = _wasFlashSuccess.value
     val backupPartitions: MutableMap<String, Boolean>
@@ -82,6 +83,8 @@ class SlotViewModel(
         get() = _error != null
     val error: String
         get() = _error!!
+	val showCautionDialog: Boolean
+		get() = _showCautionDialog.value
 
     init {
         refresh(context)
@@ -154,6 +157,14 @@ class SlotViewModel(
             _isRefreshing.value = false
         }
     }
+	
+	private fun showCautionDialog() {
+		_showCautionDialog.value = true
+	}
+	
+	fun hideCautionDialog() {
+		_showCautionDialog.value = false
+	}
 
     // TODO: use base class for common functions
     @Suppress("SameParameterValue")
@@ -176,7 +187,7 @@ class SlotViewModel(
     private fun uiPrint(message: String) {
         viewModelScope.launch(Dispatchers.Main) {
             _flashOutput.add("ui_print $message")
-            _flashOutput.add("      ui_print")
+            // _flashOutput.add("ui_print")
         }
     }
 
@@ -429,10 +440,10 @@ class SlotViewModel(
     }
 
     private fun resetSlot() {
-        // val activeSlotSuffix = Shell.cmd("getprop ro.boot.slot_suffix").exec().out[0]
-        // val newSlot = if (activeSlotSuffix == "_a") "_b" else "_a"
-        // Shell.cmd("magisk resetprop -n ro.boot.slot_suffix $newSlot").exec()
-        // wasSlotReset = !wasSlotReset
+        val activeSlotSuffix = Shell.cmd("getprop ro.boot.slot_suffix").exec().out[0]
+        val newSlot = if (activeSlotSuffix == "_a") "_b" else "_a"
+        Shell.cmd("resetprop -n ro.boot.slot_suffix $newSlot").exec()
+        wasSlotReset = !wasSlotReset
     }
 
     @Suppress("FunctionName")
@@ -496,7 +507,7 @@ class SlotViewModel(
     }
 
     @Suppress("FunctionName")
-    private suspend fun _flashAk3(context: Context, slotSuffix: String) {
+    private suspend fun _flashAk3(context: Context) {
         if (!isActive) {
             resetSlot()
         }
@@ -508,7 +519,7 @@ class SlotViewModel(
                 val files = File(context.filesDir.canonicalPath)
                 val flashScript = File(files, "flash_ak3.sh")
                 val slot_inactive_state = if(isActive) "active" else "inactive"
-                val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER or Shell.FLAG_REDIRECT_STDERR).build().newJob().add("F=$files Z=\"$zip\" S=\"$slot_inactive_state\" P=\"$slotSuffix\" /system/bin/sh $flashScript").to(flashOutput).exec()
+                val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER or Shell.FLAG_REDIRECT_STDERR).build().newJob().add("F=$files Z=\"$zip\" /system/bin/sh $flashScript").to(flashOutput).exec()
                 if (result.isSuccess) {
                     log(context, "Kernel flashed successfully")
                     _wasFlashSuccess.value = true
@@ -525,16 +536,47 @@ class SlotViewModel(
         } finally {
             uiPrint("")
             if (wasSlotReset) {
+                // uiPrint("CAUTION: You have flashed AnyKernel Zip to inactive slot!")
+                // uiPrint("But the active slot is not changed after flashing.")
+                // uiPrint("Use bootctl to change active slot or Return to System Updater to complete OTA.")
+                // uiPrint("Do not reboot from here, unless you know what you are doing.")
                 resetSlot()
+				viewModelScope.launch(Dispatchers.Main) {
+					showCautionDialog() // Show dialog instead of uiPrint
+				}
             }
         }
     }
+	
+	fun switchSlot(context: Context) {
+		viewModelScope.launch(Dispatchers.IO) {
+			try {
+				// Get current slot
+				val currentSlot = Shell.cmd("getprop ro.boot.slot_suffix").exec().out.firstOrNull() ?: "_a"
+				val targetSlot = if (currentSlot == "_a") "b" else "a"
+				
+				// Execute bootctl command
+				val result = Shell.cmd("bootctl set-active-boot-slot $targetSlot").exec()
+				
+				if (result.isSuccess) {
+					log(context, "Slot was successfully switched to $targetSlot", shouldThrow = false)
+				} else {
+					log(context, "Failed to switch slot", shouldThrow = false)
+				}
+			} catch (e: Exception) {
+				withContext(Dispatchers.Main) {
+					Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+				}
+				throw e
+			}
+		}
+	}
 
     fun flashAk3(context: Context, currentBackup: String, filename: String) {
         launch {
             _clearFlash()
             _copyFile(context, currentBackup, filename)
-            _flashAk3(context,slotSuffix)
+            _flashAk3(context)
         }
     }
 
@@ -542,7 +584,7 @@ class SlotViewModel(
         launch {
             _clearFlash()
             _copyFile(context, uri)
-            _flashAk3(context, slotSuffix)
+            _flashAk3(context)
         }
     }
 

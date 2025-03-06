@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -17,7 +19,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,6 +37,7 @@ import com.github.capntrips.kernelflasher.ui.components.DataCard
 import com.github.capntrips.kernelflasher.ui.components.FlashButton
 import com.github.capntrips.kernelflasher.ui.components.FlashList
 import com.github.capntrips.kernelflasher.ui.components.SlotCard
+import com.github.capntrips.kernelflasher.ui.components.DialogButton
 import kotlinx.serialization.ExperimentalSerializationApi
 
 @ExperimentalAnimationApi
@@ -47,6 +52,7 @@ fun ColumnScope.SlotFlashContent(
     navController: NavController
 ) {
     val context = LocalContext.current
+	
     if (!listOf("/flash/ak3", "/flash/image/flash", "/backup/backup").any { navController.currentDestination!!.route!!.endsWith(it) }) {
         SlotCard(
             title = stringResource(if (slotSuffix == "_a") R.string.slot_a else if (slotSuffix == "_b") R.string.slot_b else R.string.slot),
@@ -170,6 +176,38 @@ fun ColumnScope.SlotFlashContent(
                             }
                         }
                     }
+					if (navController.currentDestination!!.route!!.contains("ak3") && viewModel.wasFlashSuccess == true && viewModel.showCautionDialog == true){
+						AlertDialog(
+							onDismissRequest = { viewModel.hideCautionDialog() },
+							title = { Text("CAUTION", style = MaterialTheme.typography.titleLarge) },
+							text = {
+								Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+									Text("You have flashed AnyKernel Zip to inactive slot!")
+									Text("But the active slot is not changed after flashing.")
+									Text("Change active slot or return to System Updater to complete OTA.")
+									Text("Do not reboot from here, unless you know what you are doing.")
+								}
+							},
+							confirmButton = {
+								DialogButton(
+									"CHANGE SLOT",
+									{
+										viewModel.hideCautionDialog()
+										viewModel.switchSlot(context)
+									}
+								)
+							},
+							dismissButton = {
+								DialogButton(
+									"CANCEL",
+									{
+										viewModel.hideCautionDialog()
+									}
+								)
+							},
+							modifier = Modifier.padding(16.dp)
+						)
+					}
                     if (viewModel.wasFlashSuccess != false && navController.currentDestination!!.route!!.endsWith("/backup/backup")) {
                         OutlinedButton(
                             modifier = Modifier
