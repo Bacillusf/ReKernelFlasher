@@ -6,14 +6,14 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.github.capntrips.kernelflasher"
         minSdk 29
         targetSdk 34
-        versionCode 20
-        versionName "1.0.0-alpha20"
+        versionCode 21
+        versionName "1.0.0-alpha21"
 
         javaCompileOptions {
             annotationProcessorOptions {
