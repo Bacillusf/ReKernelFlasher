@@ -129,6 +129,19 @@ fun ColumnScope.SlotBackupsContent(
                             ) {
                                 Text(stringResource(R.string.flash))
                             }
+                            OutlinedButton(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                shape = RoundedCornerShape(4.dp),
+                                onClick = {
+                                    slotViewModel.flashAk3_mkbootfs(context, backupsViewModel.currentBackup!!, currentBackup.filename!!)
+                                    navController.navigate("slot$slotSuffix/backups/${backupsViewModel.currentBackup!!}/flash/ak3") {
+                                        popUpTo("slot$slotSuffix")
+                                    }
+                                }
+                            ) {
+                                Text(stringResource(R.string.flash_ak3_zip_mkbootfs))
+                            }
                         }
                     }
                     OutlinedButton(

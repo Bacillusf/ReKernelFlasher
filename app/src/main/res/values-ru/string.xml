@@ -26,7 +26,9 @@
     <string name="backup">Резервное копирование</string>
     <string name="updates">Обновления</string>
     <string name="flash">Прошивка</string>
+    <string name="flash_mkbootfs">Прошить помощью mkbootfs</string>
     <string name="flash_ak3_zip">Прошить AK3 Zip</string>
+    <string name="flash_ak3_zip_mkbootfs">Прошить AK3 Zip с помощью mkbootfs</string>
     <string name="flash_partition_image">Прошить образ раздела</string>
     <string name="restore">Восстановить</string>
     <string name="check_kernel_version">Проверить версию ядра</string>

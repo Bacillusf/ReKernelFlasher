@@ -187,7 +187,9 @@ class MainActivity : ComponentActivity() {
             copyNativeBinary("lptools_static") // v20220825
             copyNativeBinary("httools_static") // v3.2.0
             copyNativeBinary("magiskboot") // v29.0
+            copyAsset("mkbootfs")
             copyAsset("flash_ak3.sh")
+            copyAsset("flash_ak3_mkbootfs.sh")
         } catch (e: Exception) {
             Log.e(TAG, e.message, e)
             setContent {

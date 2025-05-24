@@ -84,6 +84,12 @@ fun ColumnScope.SlotFlashContent(
                 }
                 viewModel.flashAk3(context, uri)
             })
+            FlashButton(stringResource(R.string.flash_ak3_zip_mkbootfs), callback = { uri ->
+                navController.navigate("slot$slotSuffix/flash/ak3") {
+                    popUpTo("slot$slotSuffix")
+                }
+                viewModel.flashAk3_mkbootfs(context, uri)
+            })
             OutlinedButton(
                 modifier = Modifier
                     .fillMaxWidth(),

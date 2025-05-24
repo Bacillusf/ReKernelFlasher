@@ -545,7 +545,7 @@ class SlotViewModel(
     }
 
     @Suppress("FunctionName")
-    private suspend fun _flashAk3(context: Context) {
+    private suspend fun _flashAk3(context: Context, type: String) {
         if (!isActive) {
             resetSlot()
         }
@@ -555,7 +555,7 @@ class SlotViewModel(
             if (zip.exists()) {
                 _wasFlashSuccess.value = false
                 val files = File(context.filesDir.canonicalPath)
-                val flashScript = File(files, "flash_ak3.sh")
+                val flashScript = File(files, "flash_ak3$type.sh")
                 val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER).build().newJob().add("F=$files Z=\"$zip\" /system/bin/sh $flashScript").to(flashOutput, flashOutput).exec()
                 if (result.isSuccess) {
                     log(context, "Kernel flashed successfully")
@@ -610,7 +610,7 @@ class SlotViewModel(
         launch {
             _clearFlash()
             _copyFile(context, currentBackup, filename)
-            _flashAk3(context)
+            _flashAk3(context, "")
         }
     }
 
@@ -618,7 +618,23 @@ class SlotViewModel(
         launch {
             _clearFlash()
             _copyFile(context, uri)
-            _flashAk3(context)
+            _flashAk3(context, "")
+        }
+    }
+
+    fun flashAk3_mkbootfs(context: Context, currentBackup: String, filename: String) {
+        launch {
+            _clearFlash()
+            _copyFile(context, currentBackup, filename)
+            _flashAk3(context, "_mkbootfs")
+        }
+    }
+
+    fun flashAk3_mkbootfs(context: Context, uri: Uri) {
+        launch {
+            _clearFlash()
+            _copyFile(context, uri)
+            _flashAk3(context, "_mkbootfs")
         }
     }
 
