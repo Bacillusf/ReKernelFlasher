@@ -30,6 +30,7 @@
     <string name="flash_ak3_zip">刷入 AK3 压缩包</string>
     <string name="flash_ak3_zip_mkbootfs">刷入 AK3 压缩包 使用 mkbootfs</string>
     <string name="flash_partition_image">刷入分区镜像</string>
+    <string name="flash_ksu_lkm">刷入 KernelSU LKM Driver</string>
     <string name="restore">恢复</string>
     <string name="check_kernel_version">检查内核版本</string>
     <string name="mount_vendor_dlkm">挂载 Vendor DLKM</string>

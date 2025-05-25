@@ -31,7 +31,8 @@
   <string name="flash_ak3_zip">AK3 Zip をフラッシュ</string>
   <string name="flash_ak3_zip_mkbootfs">mkbootfs を使って AK3 Zip をフラッシュする</string>
   <string name="flash_partition_image">パーティションイメージをフラッシュ</string>
-  <string name="restore">復元</string>
+    <string name="flash_ksu_lkm">" KernelSU LKM Driver"</string>
+    <string name="restore">復元</string>
   <string name="check_kernel_version">カーネルバージョンを確認</string>
   <string name="mount_vendor_dlkm">Vendor DLKM をマウント</string>
   <string name="unmount_vendor_dlkm">Vendor DLKM をアンマウント</string>

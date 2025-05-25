@@ -30,6 +30,7 @@
     <string name="flash_ak3_zip">Flash AK3 Zip</string>
     <string name="flash_ak3_zip_mkbootfs">Flash AK3 Zip using mkbootfs</string>
     <string name="flash_partition_image">Flash Partition Image</string>
+    <string name="flash_ksu_lkm">Flash KernelSU LKM Driver</string>
     <string name="restore">Restore</string>
     <string name="check_kernel_version">Check Kernel Version</string>
     <string name="mount_vendor_dlkm">Mount Vendor DLKM</string>

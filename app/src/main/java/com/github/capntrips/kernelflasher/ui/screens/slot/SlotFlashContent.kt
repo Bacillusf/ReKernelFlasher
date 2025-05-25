@@ -78,17 +78,23 @@ fun ColumnScope.SlotFlashContent(
         if (navController.currentDestination!!.route!!.endsWith("/flash")) {
             DataCard (stringResource(R.string.flash))
             Spacer(Modifier.height(5.dp))
-            FlashButton(stringResource(R.string.flash_ak3_zip), callback = { uri ->
+            FlashButton(stringResource(R.string.flash_ak3_zip), "zip" ,callback = { uri ->
                 navController.navigate("slot$slotSuffix/flash/ak3") {
                     popUpTo("slot$slotSuffix")
                 }
                 viewModel.flashAk3(context, uri)
             })
-            FlashButton(stringResource(R.string.flash_ak3_zip_mkbootfs), callback = { uri ->
+            FlashButton(stringResource(R.string.flash_ak3_zip_mkbootfs), "zip" ,callback = { uri ->
                 navController.navigate("slot$slotSuffix/flash/ak3") {
                     popUpTo("slot$slotSuffix")
                 }
                 viewModel.flashAk3_mkbootfs(context, uri)
+            })
+            FlashButton(stringResource(R.string.flash_ksu_lkm), "ko" ,callback = { uri ->
+                navController.navigate("slot$slotSuffix/flash/image/flash") {
+                    popUpTo("slot$slotSuffix")
+                }
+                viewModel.flashKsuDriver(context, uri)
             })
             OutlinedButton(
                 modifier = Modifier
@@ -104,7 +110,7 @@ fun ColumnScope.SlotFlashContent(
             DataCard (stringResource(R.string.flash_partition_image))
             Spacer(Modifier.height(5.dp))
             for (partitionName in PartitionUtil.AvailablePartitions) {
-                FlashButton(partitionName, callback = { uri ->
+                FlashButton(partitionName, "img" ,callback = { uri ->
                     navController.navigate("slot$slotSuffix/flash/image/flash") {
                         popUpTo("slot$slotSuffix")
                     }
@@ -195,13 +201,13 @@ fun ColumnScope.SlotFlashContent(
                             }
                         }
                     }
-					if (navController.currentDestination!!.route!!.contains("ak3") && viewModel.wasFlashSuccess.value == true && viewModel.showCautionDialog == true){
+					if (viewModel.wasFlashSuccess.value == true && viewModel.showCautionDialog == true){
 						AlertDialog(
 							onDismissRequest = { viewModel.hideCautionDialog() },
 							title = { Text("CAUTION!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
 							text = {
 								Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-									Text("You have flashed AnyKernel Zip to inactive slot!", fontWeight = FontWeight.Bold)
+									Text("You have flashed to inactive slot!", fontWeight = FontWeight.Bold)
 									Text("But the active slot is not changed after flashing.", fontWeight = FontWeight.Bold)
 									Text("Change active slot or return to System Updater to complete OTA.", fontWeight = FontWeight.Bold)
 									Text("Do not reboot from here, unless you know what you are doing.", fontWeight = FontWeight.Bold)

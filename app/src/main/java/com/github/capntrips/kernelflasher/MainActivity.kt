@@ -188,6 +188,7 @@ class MainActivity : ComponentActivity() {
             copyNativeBinary("httools_static") // v3.2.0
             copyNativeBinary("magiskboot") // v29.0
             copyAsset("mkbootfs")
+            copyAsset("ksuinit")
             copyAsset("flash_ak3.sh")
             copyAsset("flash_ak3_mkbootfs.sh")
         } catch (e: Exception) {

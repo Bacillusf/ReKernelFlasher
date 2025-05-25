@@ -31,6 +31,7 @@
     <string name="flash_ak3_zip">Sflashuj archiwum AK3</string>
     <string name="flash_ak3_zip_mkbootfs">Flashuj archiwum AK3 za pomocą mkbootfs</string>
     <string name="flash_partition_image">Sflashuj obraz partycji</string>
+    <string name="flash_ksu_lkm">Sflashuj KernelSU LKM Driver</string>
     <string name="restore">Przywróć</string>
     <string name="check_kernel_version">Sprawdź wersję jądra</string>
     <string name="mount_vendor_dlkm">Zamontuj Vendor DLKM</string>
