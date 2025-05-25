@@ -156,7 +156,7 @@ fun ColumnScope.SlotFlashContent(
                 },
                 enabled = viewModel.backupPartitions.filter { it.value }.isNotEmpty()
             ) {
-                Text(stringResource(R.string.backup))
+                Text(stringResource(R.string.backup_now))
             }
         }
     } else {

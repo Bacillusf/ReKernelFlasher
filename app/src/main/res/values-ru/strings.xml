@@ -66,4 +66,5 @@
     <string name="init_boot_fmt">init_boot.img формат</string>
     <string name="ramdisk_fmt">Ramdisk формат</string>
     <string name="susfs_version">SUSFS Версия</string>
+    <string name="backup_now">Резервное копирование выбранных разделов</string>
 </resources>

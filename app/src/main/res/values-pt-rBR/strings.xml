@@ -66,4 +66,5 @@
     <string name="init_boot_fmt">Formato do init_boot.img</string>
     <string name="ramdisk_fmt">Formato do Ramdisk</string>
     <string name="susfs_version">SUSFS Versão</string>
+    <string name="backup_now">Fazer backup das partições selecionadas</string>
 </resources>

@@ -66,5 +66,6 @@
     <string name="init_boot_fmt">init_boot.img Format</string>
     <string name="ramdisk_fmt">Ramdisk Format</string>
     <string name="susfs_version">SUSFS Version</string>
+    <string name="backup_now">Backup Selected Partitions</string>
     <!-- TODO: Make error and success messages string resources -->
 </resources>

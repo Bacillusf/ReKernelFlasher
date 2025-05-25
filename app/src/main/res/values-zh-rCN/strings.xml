@@ -66,4 +66,5 @@
     <string name="init_boot_fmt">init_boot.img 格式</string>
     <string name="ramdisk_fmt">Ramdisk 格式</string>
     <string name="susfs_version">SUSFS 版本</string>
+    <string name="backup_now">備份选定的分区</string>
 </resources>
