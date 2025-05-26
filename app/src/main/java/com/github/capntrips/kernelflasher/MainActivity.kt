@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver
+import android.view.Window
 import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -130,9 +131,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        requestWindowFeature(Window.FEATURE_NO_TITLE) // Hide the title bar
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             val scale = ObjectAnimator.ofPropertyValuesHolder(
