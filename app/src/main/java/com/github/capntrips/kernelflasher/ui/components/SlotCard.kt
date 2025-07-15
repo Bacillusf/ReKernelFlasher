@@ -24,7 +24,7 @@ fun SlotCard(
     showDlkm: Boolean = true,
 ) {
     DataCard (
-        title = title,
+        title = "$title ${if(viewModel.isActive && viewModel.slotSuffix !="") "[Active]" else ""}",
         button = {
             if (!isSlotScreen) {
                 AnimatedVisibility(!viewModel.isRefreshing.value) {
