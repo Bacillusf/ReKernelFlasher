@@ -195,6 +195,7 @@ class MainActivity : ComponentActivity() {
             copyNativeBinary("httools_static") // v3.2.0
             copyNativeBinary("magiskboot") // v29.0
             copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+            copyNativeBinary("busybox") // BusyBox v1.36.1.1
             copyAsset("mkbootfs")
             copyAsset("ksuinit")
             copyAsset("flash_ak3.sh")
