@@ -39,6 +39,7 @@ class MainViewModel(
     val slotSuffix: String
 
     val kernelVersion: String
+    val halInfo: String
     val susfsVersion: String
     val isAb: Boolean
     val slotA: SlotViewModel
@@ -78,6 +79,10 @@ class MainViewModel(
 
     init {
         PartitionUtil.init(context, fileSystemManager)
+        val bootctl = File(context.filesDir, "bootctl")
+        halInfo = runCatching { Shell.cmd("$bootctl hal-info").exec().out[0].substringAfter("HAL Version: ").trim() }
+            .recoverCatching { "" }
+            .getOrDefault("")
         kernelVersion = Shell.cmd("echo $(uname -r) $(uname -v)").exec().out[0]
         susfsVersion = runCatching { Shell.cmd("susfsd version").exec().out[0] }
             .recoverCatching { Shell.cmd("ksu_susfs show version").exec().out[0] }

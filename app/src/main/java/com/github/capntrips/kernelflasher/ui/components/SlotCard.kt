@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +77,21 @@ fun SlotCard(
             value = viewModel.bootInfo.initBootFmt ?: stringResource(R.string.not_found),
             mutableMaxWidth = cardWidth
         )
+        if(isSlotScreen && viewModel.slotSuffix != "")
+        {
+            DataRow(
+                label = "Unbootable",
+                value = viewModel.bootSlotInfo.unbootable ?: stringResource(R.string.not_found),
+                mutableMaxWidth = cardWidth,
+                valueColor = if (viewModel.bootSlotInfo.unbootable == "Yes") Color.Red else Color.Unspecified
+            )
+            DataRow(
+                label = "Successful",
+                value = viewModel.bootSlotInfo.successful ?: stringResource(R.string.not_found),
+                mutableMaxWidth = cardWidth,
+                valueColor = if (viewModel.bootSlotInfo.successful == "No") Color.Red else Color.Unspecified
+            )
+        }
         if (!viewModel.isRefreshing.value && viewModel.hasError) {
             Row {
                 DataValue(

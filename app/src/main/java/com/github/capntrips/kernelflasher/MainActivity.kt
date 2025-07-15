@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
@@ -189,6 +190,7 @@ class MainActivity : ComponentActivity() {
             copyNativeBinary("lptools_static") // v20220825
             copyNativeBinary("httools_static") // v3.2.0
             copyNativeBinary("magiskboot") // v29.0
+            copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
             copyAsset("mkbootfs")
             copyAsset("ksuinit")
             copyAsset("flash_ak3.sh")

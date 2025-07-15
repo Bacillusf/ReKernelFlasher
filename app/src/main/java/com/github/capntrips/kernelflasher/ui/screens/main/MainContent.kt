@@ -44,6 +44,10 @@ fun ColumnScope.MainContent(
         {
             DataRow(stringResource(R.string.susfs_version), viewModel.susfsVersion, mutableMaxWidth = cardWidth)
         }
+        if(viewModel.halInfo != "")
+        {
+            DataRow("Boot HAL version", viewModel.halInfo, mutableMaxWidth = cardWidth)
+        }
     }
     Spacer(Modifier.height(16.dp))
     SlotCard(

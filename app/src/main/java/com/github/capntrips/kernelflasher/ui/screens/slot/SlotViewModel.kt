@@ -53,6 +53,11 @@ class SlotViewModel(
         const val RAMDISK_FMT = "RAMDISK_FMT"
     }
 
+    data class BootSlotInfo(
+        var unbootable: String? = null,
+        var successful: String? = null,
+    )
+
     data class BootInfo(
         var kernelVersion: String? = null,
         var bootFmt: String? = null,
@@ -63,6 +68,7 @@ class SlotViewModel(
 
     private var _sha1: String? = null
     private val _bootInfo: MutableState<BootInfo> = mutableStateOf(BootInfo())
+    private val _bootSlotInfo: MutableState<BootSlotInfo> = mutableStateOf(BootSlotInfo())
     var hasVendorDlkm: Boolean = false
     var isVendorDlkmMapped: Boolean = false
     var isVendorDlkmMounted: Boolean = false
@@ -97,6 +103,8 @@ class SlotViewModel(
 		get() = _showCautionDialog.value
     val bootInfo: BootInfo
         get() = _bootInfo.value
+    val bootSlotInfo: BootSlotInfo
+        get() = _bootSlotInfo.value
 
     init {
         refresh(context)
@@ -117,11 +125,19 @@ class SlotViewModel(
         }
 
         val magiskboot = File(context.filesDir, "magiskboot")
+        val bootctl = File(context.filesDir, "bootctl")
         Shell.cmd("$magiskboot cleanup").exec()
 
         val unpackBootOutput = mutableListOf<String>()
         Shell.cmd("$magiskboot unpack $boot").to(unpackBootOutput, unpackBootOutput).exec()
         val bootUnpackOp = unpackBootOutput.joinToString("\n")
+
+        if(slotSuffix != "") {
+            val resCode1 = Shell.cmd("$bootctl is-slot-bootable " + if (slotSuffix == "_a") "0" else "1").exec().code
+            _bootSlotInfo.value.unbootable = if(resCode1 == 0) "No" else "Yes"
+            val resCode2 = Shell.cmd("$bootctl is-slot-marked-successful " + if (slotSuffix == "_a") "0" else "1").exec().code
+            _bootSlotInfo.value.successful = if(resCode2 == 0) "Yes" else "No"
+        }
 
         _bootInfo.value.headerVersion = extractKernelValues(bootUnpackOp.trimIndent(), HEADER_VER)
         _bootInfo.value.bootFmt = extractKernelValues(bootUnpackOp.trimIndent(), KERNEL_FMT)
@@ -615,7 +631,8 @@ class SlotViewModel(
 				val targetSlot = if (currentSlot == "_a") "b" else "a"
 				
 				// Execute bootctl command
-				val result = Shell.cmd("bootctl set-active-boot-slot $targetSlot").exec()
+                val bootctl = File(context.filesDir, "bootctl")
+				val result = Shell.cmd("$bootctl set-active-boot-slot $targetSlot").exec()
 				
 				if (result.isSuccess) {
 					log(context, "Slot was successfully switched to $targetSlot", shouldThrow = false)
