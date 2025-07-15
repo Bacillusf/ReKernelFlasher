@@ -25,6 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".FilesystemService" android:exported="false" tools:ignore="Instantiatable" />
     </application>
 
 </manifest>
