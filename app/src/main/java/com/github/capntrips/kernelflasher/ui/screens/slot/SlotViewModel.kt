@@ -459,17 +459,16 @@ class SlotViewModel(
         return backupDir
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun backup(context: Context) {
         launch {
             _clearFlash()
-            val currentKernelVersion = if (_slotInfo.value.bootImgInfo.kernelVersion != null) {
-                _slotInfo.value.bootImgInfo.kernelVersion
-            } else if (isActive) {
-                System.getProperty("os.version")!!
-            } else {
+
+            val currentKernelVersion = _slotInfo.value.bootImgInfo.kernelVersion ?: run {
                 _getKernel(context)
-                _slotInfo.value.bootImgInfo.kernelVersion
+                _slotInfo.value.bootImgInfo.kernelVersion ?: System.getProperty("os.version")!!
             }
+
             val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd--HH-mm"))
             val backupDir = createBackupDir(context, now)
             addMessage("Saving backup $now")
@@ -484,9 +483,11 @@ class SlotViewModel(
             _backups[now] = backup
             addMessage("Backup $now saved")
             _wasFlashSuccess.value = true
+            SharedViewModels.mainViewModel.markRefreshNeeded()
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun backupZip(context: Context, callback: () -> Unit) {
         launch {
             val source = context.contentResolver.openInputStream(flashUri!!)
@@ -511,6 +512,7 @@ class SlotViewModel(
             } else {
                 log(context, "AK3 zip is missing", shouldThrow = true)
             }
+            SharedViewModels.mainViewModel.markRefreshNeeded()
         }
     }
 
