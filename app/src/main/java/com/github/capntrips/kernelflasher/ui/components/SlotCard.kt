@@ -48,10 +48,10 @@ fun SlotCard(
                 mutableMaxWidth = cardWidth
             )
         }
-        AnimatedVisibility(!viewModel.isRefreshing.value && viewModel.bootInfo.kernelVersion != null) {
+        AnimatedVisibility(!viewModel.isRefreshing.value && viewModel.slotInfo.bootImgInfo.kernelVersion != null) {
             DataRow(
                 label = stringResource(R.string.kernel_version),
-                value = if (viewModel.bootInfo.kernelVersion != null) viewModel.bootInfo.kernelVersion!! else "",
+                value = viewModel.slotInfo.bootImgInfo.kernelVersion ?: "",
                 mutableMaxWidth = cardWidth,
                 clickable = true
             )
@@ -69,27 +69,27 @@ fun SlotCard(
         }
         DataRow(
             label = stringResource(R.string.boot_fmt),
-            value = viewModel.bootInfo.bootFmt ?: stringResource(R.string.not_found),
+            value = viewModel.slotInfo.bootImgInfo.bootFmt ?: stringResource(R.string.not_found),
             mutableMaxWidth = cardWidth
         )
         DataRow(
-            label = if (viewModel.bootInfo.ramdiskLocation == "init_boot.img") stringResource(R.string.init_boot_fmt) else stringResource(R.string.ramdisk_fmt),
-            value = viewModel.bootInfo.initBootFmt ?: stringResource(R.string.not_found),
+            label = if (viewModel.slotInfo.ramdiskInfo.ramdiskLocation == "init_boot.img") stringResource(R.string.init_boot_fmt) else stringResource(R.string.ramdisk_fmt),
+            value = viewModel.slotInfo.ramdiskInfo.ramdiskFmt ?: stringResource(R.string.not_found),
             mutableMaxWidth = cardWidth
         )
         if(isSlotScreen && viewModel.slotSuffix != "")
         {
             DataRow(
                 label = "Unbootable",
-                value = viewModel.bootSlotInfo.unbootable ?: stringResource(R.string.not_found),
+                value = viewModel.slotInfo.bootSlotInfo.unbootable ?: stringResource(R.string.not_found),
                 mutableMaxWidth = cardWidth,
-                valueColor = if (viewModel.bootSlotInfo.unbootable == "Yes") Color.Red else Color.Unspecified
+                valueColor = if (viewModel.slotInfo.bootSlotInfo.unbootable == "Yes") Color.Red else Color.Unspecified
             )
             DataRow(
                 label = "Successful",
-                value = viewModel.bootSlotInfo.successful ?: stringResource(R.string.not_found),
+                value = viewModel.slotInfo.bootSlotInfo.successful ?: stringResource(R.string.not_found),
                 mutableMaxWidth = cardWidth,
-                valueColor = if (viewModel.bootSlotInfo.successful == "No") Color.Red else Color.Unspecified
+                valueColor = if (viewModel.slotInfo.bootSlotInfo.successful == "No") Color.Red else Color.Unspecified
             )
         }
         if (!viewModel.isRefreshing.value && viewModel.hasError) {

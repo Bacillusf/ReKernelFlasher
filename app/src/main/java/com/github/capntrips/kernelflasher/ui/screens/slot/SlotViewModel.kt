@@ -60,17 +60,26 @@ class SlotViewModel(
         var successful: String? = null,
     )
 
-    data class BootInfo(
+    data class BootImgInfo(
         var kernelVersion: String? = null,
         var bootFmt: String? = null,
         var headerVersion: String? = null,
-        var initBootFmt: String? = null,
-        var ramdiskLocation: String? = null
+    )
+
+    data class RamdiskInfo(
+        var headerVersion: String? = null,
+        var ramdiskFmt: String? = null,
+        var ramdiskLocation: String? = null,
+    )
+
+    data class SlotInfo(
+        var bootSlotInfo: BootSlotInfo,
+        var bootImgInfo: BootImgInfo,
+        var ramdiskInfo: RamdiskInfo,
     )
 
     private var _sha1: String? = null
-    private val _bootInfo: MutableState<BootInfo> = mutableStateOf(BootInfo())
-    private val _bootSlotInfo: MutableState<BootSlotInfo> = mutableStateOf(BootSlotInfo())
+    private val _slotInfo: MutableState<SlotInfo> = mutableStateOf(SlotInfo(BootSlotInfo(), BootImgInfo(), RamdiskInfo()))
     var hasVendorDlkm: Boolean = false
     var isVendorDlkmMapped: Boolean = false
     var isVendorDlkmMounted: Boolean = false
@@ -103,10 +112,8 @@ class SlotViewModel(
         get() = _error
 	val showCautionDialog: Boolean
 		get() = _showCautionDialog.value
-    val bootInfo: BootInfo
-        get() = _bootInfo.value
-    val bootSlotInfo: BootSlotInfo
-        get() = _bootSlotInfo.value
+    val slotInfo: SlotInfo
+        get() = _slotInfo.value
 
     init {
         refresh(context)
@@ -120,7 +127,9 @@ class SlotViewModel(
     fun refresh(context: Context) {
         _error = null
         _sha1 = null
-        _bootInfo.value = _bootInfo.value.copy(kernelVersion = null, bootFmt = null, headerVersion = null, initBootFmt = null, ramdiskLocation = null)
+        _slotInfo.value.bootSlotInfo = _slotInfo.value.bootSlotInfo.copy(null, null)
+        _slotInfo.value.bootImgInfo = _slotInfo.value.bootImgInfo.copy(null, null, null)
+        _slotInfo.value.ramdiskInfo = _slotInfo.value.ramdiskInfo.copy(null, null, null)
 
         if (!isActive) {
             inInit = true
@@ -136,25 +145,28 @@ class SlotViewModel(
 
         if(slotSuffix != "") {
             val resCode1 = Shell.cmd("$bootctl is-slot-bootable " + if (slotSuffix == "_a") "0" else "1").exec().code
-            _bootSlotInfo.value.unbootable = if(resCode1 == 0) "No" else "Yes"
+            _slotInfo.value.bootSlotInfo.unbootable = if(resCode1 == 0) "No" else "Yes"
             val resCode2 = Shell.cmd("$bootctl is-slot-marked-successful " + if (slotSuffix == "_a") "0" else "1").exec().code
-            _bootSlotInfo.value.successful = if(resCode2 == 0) "Yes" else "No"
+            _slotInfo.value.bootSlotInfo.successful = if(resCode2 == 0) "Yes" else "No"
         }
 
-        _bootInfo.value.headerVersion = extractKernelValues(bootUnpackOp.trimIndent(), HEADER_VER)
-        _bootInfo.value.bootFmt = extractKernelValues(bootUnpackOp.trimIndent(), KERNEL_FMT)
-        _bootInfo.value.initBootFmt = extractKernelValues(bootUnpackOp.trimIndent(), RAMDISK_FMT)
-        if (_bootInfo.value.initBootFmt != null)
-            _bootInfo.value.ramdiskLocation = "boot.img"
+        _slotInfo.value.bootImgInfo.headerVersion = extractKernelValues(bootUnpackOp.trimIndent(), HEADER_VER)
+        _slotInfo.value.bootImgInfo.bootFmt = extractKernelValues(bootUnpackOp.trimIndent(), KERNEL_FMT)
+        _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(bootUnpackOp.trimIndent(), RAMDISK_FMT)
+        if (_slotInfo.value.ramdiskInfo.ramdiskFmt != null)
+        {
+            _slotInfo.value.ramdiskInfo.ramdiskLocation = "boot.img"
+            _slotInfo.value.ramdiskInfo.headerVersion = _slotInfo.value.bootImgInfo.headerVersion
+        }
+        Log.d(TAG, _slotInfo.value.bootImgInfo.toString())
 
-        Log.d(TAG, _bootInfo.value.toString())
-        if (initBoot != null && _bootInfo.value.initBootFmt == null) {
+        if (initBoot != null && _slotInfo.value.ramdiskInfo.ramdiskFmt == null) {
             val unpackInitBootOutput = mutableListOf<String>()
             if(Shell.cmd("$magiskboot unpack $initBoot").to(unpackInitBootOutput, unpackInitBootOutput).exec().isSuccess)
             {
                 val initBootUnpackOp = unpackInitBootOutput.joinToString("\n")
-                _bootInfo.value.initBootFmt = extractKernelValues(initBootUnpackOp.trimIndent(), RAMDISK_FMT)
-                _bootInfo.value.ramdiskLocation = "init_boot.img"
+                _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(initBootUnpackOp.trimIndent(), RAMDISK_FMT)
+                _slotInfo.value.ramdiskInfo.ramdiskLocation = "init_boot.img"
             }
         }
 
@@ -184,16 +196,16 @@ class SlotViewModel(
             }
         } else if (kernel.exists()) {
             _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
-            if(_bootInfo.value.headerVersion.equals("4") && _bootInfo.value.ramdiskLocation.equals(null))
+            if(_slotInfo.value.bootImgInfo.headerVersion.equals("4") && _slotInfo.value.ramdiskInfo.ramdiskLocation.equals(null))
             {
-                _bootInfo.value.ramdiskLocation = "boot.img"
-                _bootInfo.value.initBootFmt = "lz4_legacy"
+                _slotInfo.value.ramdiskInfo.ramdiskLocation = "boot.img"
+                _slotInfo.value.ramdiskInfo.ramdiskFmt = "lz4_legacy"
             }
         } else {
-            if(_bootInfo.value.headerVersion.equals("4") && _bootInfo.value.ramdiskLocation.equals(null))
+            if(_slotInfo.value.bootImgInfo.headerVersion.equals("4") && _slotInfo.value.ramdiskInfo.ramdiskLocation.equals(null))
             {
-                _bootInfo.value.ramdiskLocation = "boot.img"
-                _bootInfo.value.initBootFmt = "lz4_legacy"
+                _slotInfo.value.ramdiskInfo.ramdiskLocation = "boot.img"
+                _slotInfo.value.ramdiskInfo.ramdiskFmt = "lz4_legacy"
             }
             _error = "Unable to generate SHA1 hash. Invalid boot.img or magiskboot unpack failed!"
         }
@@ -203,7 +215,7 @@ class SlotViewModel(
             _backupPartitions[partitionName] = true
         }
 
-        _bootInfo.value.kernelVersion = null
+        _slotInfo.value.bootImgInfo.kernelVersion = null
         inInit = false
     }
 
@@ -323,7 +335,7 @@ class SlotViewModel(
         if (kernel.exists()) {
             val result = Shell.cmd("strings kernel | grep -E -m1 'Linux version.*#' | cut -d\\  -f3-").exec().out
             if (result.isNotEmpty()) {
-                _bootInfo.value.kernelVersion = result[0].replace("""\(.+\)""".toRegex(), "").replace("""\s+""".toRegex(), " ")
+                _slotInfo.value.bootImgInfo.kernelVersion = result[0].replace("""\(.+\)""".toRegex(), "").replace("""\s+""".toRegex(), " ")
             }
         }
         Shell.cmd("$magiskboot cleanup").exec()
@@ -450,13 +462,13 @@ class SlotViewModel(
     fun backup(context: Context) {
         launch {
             _clearFlash()
-            val currentKernelVersion = if (_bootInfo.value.kernelVersion != null) {
-                _bootInfo.value.kernelVersion
+            val currentKernelVersion = if (_slotInfo.value.bootImgInfo.kernelVersion != null) {
+                _slotInfo.value.bootImgInfo.kernelVersion
             } else if (isActive) {
                 System.getProperty("os.version")!!
             } else {
                 _getKernel(context)
-                _bootInfo.value.kernelVersion
+                _slotInfo.value.bootImgInfo.kernelVersion
             }
             val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd--HH-mm"))
             val backupDir = createBackupDir(context, now)
@@ -483,7 +495,7 @@ class SlotViewModel(
                 val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd--HH-mm"))
                 val backupDir = createBackupDir(context, now)
                 val jsonFile = backupDir.getChildFile("backup.json")
-                val backup = Backup(now, "ak3", _bootInfo.value.kernelVersion!!, null, flashFilename)
+                val backup = Backup(now, "ak3", _slotInfo.value.bootImgInfo.kernelVersion!!, null, flashFilename)
                 val indentedJson = Json { prettyPrint = true }
                 jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
                 val destination = backupDir.getChildFile(flashFilename!!)
@@ -703,7 +715,7 @@ class SlotViewModel(
                 if (driver.exists()) {
                     addMessage("Copied $flashFilename")
                     _wasFlashSuccess.value = false
-                    val partitionName = bootInfo.ramdiskLocation?.removeSuffix(".img") ?: "boot"
+                    val partitionName = _slotInfo.value.ramdiskInfo.ramdiskLocation?.removeSuffix(".img") ?: "boot"
                     val magiskboot = File(context.filesDir, "magiskboot")
                     val ksuinit = File(context.filesDir, "ksuinit")
                     if(partitionName == "boot")
