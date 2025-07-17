@@ -73,7 +73,9 @@ fun SlotCard(
             mutableMaxWidth = cardWidth
         )
         DataRow(
-            label = if (viewModel.slotInfo.ramdiskInfo.ramdiskLocation == "init_boot.img") stringResource(R.string.init_boot_fmt) else stringResource(R.string.ramdisk_fmt),
+            label = if (viewModel.slotInfo.ramdiskInfo.ramdiskLocation == "init_boot.img") stringResource(R.string.init_boot_fmt)
+                    else if (viewModel.slotInfo.ramdiskInfo.ramdiskLocation == "vendor_boot.img") stringResource(R.string.vendor_boot_fmt)
+                    else stringResource(R.string.ramdisk_fmt),
             value = viewModel.slotInfo.ramdiskInfo.ramdiskFmt ?: stringResource(R.string.not_found),
             mutableMaxWidth = cardWidth
         )

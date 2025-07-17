@@ -53,6 +53,7 @@ class SlotViewModel(
         const val HEADER_VER = "HEADER_VER"
         const val KERNEL_FMT = "KERNEL_FMT"
         const val RAMDISK_FMT = "RAMDISK_FMT"
+        const val VND_RAMDISK = "VND_RAMDISK"
     }
 
     data class BootSlotInfo(
@@ -119,8 +120,8 @@ class SlotViewModel(
         refresh(context)
     }
 
-    private fun extractKernelValues(input: String, key: String): String? {
-        val regex = Regex("$key\\s*\\[([^]]+)]")
+    private fun extractKernelValues(input: String, key: String, isVendor_boot: Boolean = false): String? {
+        val regex = if(isVendor_boot == true) Regex("VND_RAMDISK.*fmt=\\[([^]]+)]") else Regex("$key\\s*\\[([^]]+)]")
         return regex.find(input)?.groupValues?.get(1)
     }
 
@@ -167,6 +168,17 @@ class SlotViewModel(
                 val initBootUnpackOp = unpackInitBootOutput.joinToString("\n")
                 _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(initBootUnpackOp.trimIndent(), RAMDISK_FMT)
                 _slotInfo.value.ramdiskInfo.ramdiskLocation = "init_boot.img"
+            }
+        }
+        else
+        {
+            var vendor_boot = PartitionUtil.findPartitionBlockDevice(context, "vendor_boot", slotSuffix)
+            val unpackVendorBootOutput = mutableListOf<String>()
+            if(Shell.cmd("$magiskboot unpack $vendor_boot").to(unpackVendorBootOutput, unpackVendorBootOutput).exec().isSuccess)
+            {
+                val vendorBootUnpackOp = unpackVendorBootOutput.joinToString("\n")
+                _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(vendorBootUnpackOp.trimIndent(), VND_RAMDISK, true)
+                _slotInfo.value.ramdiskInfo.ramdiskLocation = "vendor_boot.img"
             }
         }
 
@@ -702,6 +714,7 @@ class SlotViewModel(
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun flashKsuDriver(context: Context, uri: Uri) {
         launch {
             _clearFlash()
@@ -720,49 +733,38 @@ class SlotViewModel(
                     val partitionName = _slotInfo.value.ramdiskInfo.ramdiskLocation?.removeSuffix(".img") ?: "boot"
                     val magiskboot = File(context.filesDir, "magiskboot")
                     val ksuinit = File(context.filesDir, "ksuinit")
+                    addMessage("Unpacking $partitionName")
+                    var ramdisk = File(context.filesDir, "ramdisk.cpio")
                     if(partitionName == "boot")
-                    {
-                        addMessage("Unpacking boot.img")
                         Shell.cmd("$magiskboot unpack $boot").exec()
-                    }
-                    else
-                    {
-                        addMessage("Unpacking init_boot")
+                    else if(partitionName == "init_boot")
                         Shell.cmd("$magiskboot unpack $initBoot").exec()
+                    else {
+                        var vendor_boot = PartitionUtil.findPartitionBlockDevice(context, "vendor_boot", slotSuffix)
+                        Shell.cmd("$magiskboot unpack $vendor_boot").exec()
+                        ramdisk = File(context.filesDir, "vendor_ramdisk/ramdisk.cpio")
+                        if (!ramdisk.exists())
+                            ramdisk = File(context.filesDir, "vendor_ramdisk/init_boot.cpio")
                     }
 
-                    val ramdisk = File(context.filesDir, "ramdisk.cpio")
+
 
                     if (ramdisk.exists()) {
                         addMessage("Patching Ramdisk")
 
-                        if(Shell.cmd("$magiskboot cpio ramdisk.cpio 'exists kernelsu.ko'").to(flashOutput, flashOutput).exec().isSuccess) {
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'rm init'")
-                                .to(flashOutput, flashOutput).exec()
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'add 0755 init $ksuinit'")
-                                .to(flashOutput, flashOutput).exec()
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'rm kernelsu.ko'")
-                                .to(flashOutput, flashOutput).exec()
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'add 0755 kernelsu.ko $driver'")
-                                .to(flashOutput, flashOutput).exec()
-                        }
+                        if(Shell.cmd("$magiskboot cpio $ramdisk 'exists kernelsu.ko'").to(flashOutput, flashOutput).exec().isSuccess)
+                            Shell.cmd("$magiskboot cpio $ramdisk 'rm init' 'add 0755 init $ksuinit' 'rm kernelsu.ko' 'add 0755 kernelsu.ko $driver'").to(flashOutput, flashOutput).exec()
                         else
-                        {
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'mv init init.real'").to(flashOutput, flashOutput).exec()
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'add 0755 init $ksuinit'")
-                                .to(flashOutput, flashOutput).exec()
-                            Shell.cmd("$magiskboot cpio ramdisk.cpio 'add 0755 kernelsu.ko $driver'")
-                                .to(flashOutput, flashOutput).exec()
-                        }
+                            Shell.cmd("$magiskboot cpio $ramdisk 'mv init init.real' 'add 0755 init $ksuinit' 'add 0755 kernelsu.ko $driver'").to(flashOutput, flashOutput).exec()
+
+                        addMessage("Repacking $partitionName")
                         if(partitionName == "boot")
-                        {
-                            addMessage("Repacking boot.img")
                             Shell.cmd("$magiskboot repack $boot").exec()
-                        }
-                        else
-                        {
-                            addMessage("Repacking init_boot.img")
+                        else if(partitionName == "init_boot")
                             Shell.cmd("$magiskboot repack $initBoot").exec()
+                        else {
+                            var vendor_boot = PartitionUtil.findPartitionBlockDevice(context, "vendor_boot", slotSuffix)
+                            Shell.cmd("$magiskboot repack $vendor_boot").exec()
                         }
 
                         if(newBootImg.exists()) {
