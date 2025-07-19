@@ -384,22 +384,27 @@ class SlotViewModel(
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun unmountVendorDlkm(context: Context) {
         launch {
             val httools = File(context.filesDir, "httools_static")
             Shell.cmd("$httools umount vendor_dlkm").exec()
+            SharedViewModels.mainViewModel.markRefreshNeeded()
             refresh(context)
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun mountVendorDlkm(context: Context) {
         launch {
             val httools = File(context.filesDir, "httools_static")
             Shell.cmd("$httools mount vendor_dlkm").exec()
+            SharedViewModels.mainViewModel.markRefreshNeeded()
             refresh(context)
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun unmapVendorDlkm(context: Context) {
         launch {
             val lptools = File(context.filesDir, "lptools_static")
@@ -413,14 +418,17 @@ class SlotViewModel(
                     Shell.cmd("$lptools unmap vendor_dlkm$slotSuffix").exec()
                 }
             }
+            SharedViewModels.mainViewModel.markRefreshNeeded()
             refresh(context)
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun mapVendorDlkm(context: Context) {
         launch {
             val lptools = File(context.filesDir, "lptools_static")
             Shell.cmd("$lptools map vendor_dlkm$slotSuffix").exec()
+            SharedViewModels.mainViewModel.markRefreshNeeded()
             refresh(context)
         }
     }
@@ -503,7 +511,7 @@ class SlotViewModel(
                 log(context, "No partitions saved", shouldThrow = true)
             }
             val jsonFile = backupDir.getChildFile("backup.json")
-            val backup = Backup(now, "raw", currentKernelVersion!!, sha1, null, hashes, hashAlgorithm)
+            val backup = Backup(now, "raw", currentKernelVersion, sha1, null, hashes, hashAlgorithm)
             val indentedJson = Json { prettyPrint = true }
             jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
             _backups[now] = backup
@@ -795,7 +803,7 @@ class SlotViewModel(
                     Shell.cmd("$magiskboot cleanup").exec()
 
                     addMessage("Flashing $image to $partitionName$slotSuffix ...")
-                    val blockDevice = partitionName?.let {
+                    val blockDevice = partitionName.let {
                         PartitionUtil.findPartitionBlockDevice(context,
                             it, slotSuffix)
                     }
@@ -842,6 +850,7 @@ class SlotViewModel(
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     fun flashImage(context: Context, uri: Uri, partitionName: String) {
         launch {
             _clearFlash()

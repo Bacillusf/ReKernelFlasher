@@ -1,8 +1,6 @@
 package com.github.capntrips.kernelflasher.ui.screens.slot
 
-import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -39,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
 import com.github.capntrips.kernelflasher.R
-import com.github.capntrips.kernelflasher.SharedViewModels
 import com.github.capntrips.kernelflasher.common.PartitionUtil
 import com.github.capntrips.kernelflasher.ui.components.DataCard
 import com.github.capntrips.kernelflasher.ui.components.FlashButton
@@ -63,13 +60,21 @@ fun ColumnScope.SlotFlashContent(
     val context = LocalContext.current
 
     val isRefreshing by remember { derivedStateOf { viewModel.isRefreshing } }
-    val currentRoute = navController.currentDestination!!.route.orEmpty()
+    val currentRoute = navController.currentDestination?.route.orEmpty()
 
-    BackHandler(enabled = ((currentRoute.endsWith("/flash/ak3") ||
-            currentRoute.endsWith("/flash/image/flash") ||
-            currentRoute.endsWith("/backup/backup")) && isRefreshing.value)) { }
+    val isAk3 = currentRoute.contains("ak3")
+    val isFlashImage = currentRoute.endsWith("/flash/image")
+    val isBackup = currentRoute.endsWith("/backup")
+    val isBackupResult = currentRoute.endsWith("/backup/backup")
+    val isFlashAk3 = currentRoute.endsWith("/flash/ak3")
+    val isImageFlashResult = currentRoute.endsWith("/flash/image/flash")
 
-    if (!listOf("/flash/ak3", "/flash/image/flash", "/backup/backup").any { navController.currentDestination!!.route!!.endsWith(it) }) {
+    val isFlashScreen = currentRoute.endsWith("/flash")
+    val isSlotScreen = !(isFlashAk3 || isImageFlashResult || isBackupResult) // Not in Flashing Screen; So Its considered Slot Screen
+
+    BackHandler(enabled = ((isFlashAk3 || isImageFlashResult || isBackupResult) && isRefreshing.value)) { }
+
+    if (isSlotScreen) {
         SlotCard(
             title = stringResource(if (slotSuffix == "_a") R.string.slot_a else if (slotSuffix == "_b") R.string.slot_b else R.string.slot),
             viewModel = viewModel,
@@ -78,7 +83,7 @@ fun ColumnScope.SlotFlashContent(
             showDlkm = false
         )
         Spacer(Modifier.height(16.dp))
-        if (navController.currentDestination!!.route!!.endsWith("/flash")) {
+        if (isFlashScreen) {
             DataCard (stringResource(R.string.flash))
             Spacer(Modifier.height(5.dp))
             FlashButton(stringResource(R.string.flash_ak3_zip), "zip" ,callback = { uri ->
@@ -106,7 +111,7 @@ fun ColumnScope.SlotFlashContent(
             ) {
                 Text(stringResource(R.string.flash_partition_image))
             }
-        } else if (navController.currentDestination!!.route!!.endsWith("/flash/image")) {
+        } else if (isFlashImage) {
             DataCard (stringResource(R.string.flash_partition_image))
             Spacer(Modifier.height(5.dp))
             for (partitionName in PartitionUtil.AvailablePartitions) {
@@ -117,7 +122,7 @@ fun ColumnScope.SlotFlashContent(
                     viewModel.showConfirmDialog()
                 })
             }
-        } else if (navController.currentDestination!!.route!!.endsWith("/backup")) {
+        } else if (isBackup) {
             DataCard (stringResource(R.string.backup))
             Spacer(Modifier.height(5.dp))
             val disabledColor = ButtonDefaults.buttonColors(
@@ -162,31 +167,25 @@ fun ColumnScope.SlotFlashContent(
     } else {
         Text("")
         FlashList(
-            stringResource(if (navController.currentDestination!!.route!!.endsWith("/backup/backup")) R.string.backup else R.string.flash),
-            if (navController.currentDestination!!.route!!.contains("ak3"))
+            stringResource(if (isBackupResult) R.string.backup else R.string.flash),
+            if (isAk3)
                 viewModel.uiPrintedOutput
             else viewModel.flashOutput
         ) {
             AnimatedVisibility(!viewModel.isRefreshing.value && viewModel.wasFlashSuccess.value != null) {
                 Column {
-                    if (navController.currentDestination!!.route!!.contains("ak3")) {
+                    if (isAk3) {
                         OutlinedButton(
                             modifier = Modifier
                                 .fillMaxWidth(),
                             shape = RoundedCornerShape(4.dp),
                             onClick = { viewModel.saveLog(context) }
                         ) {
-                            if (navController.currentDestination!!.route!!.contains("ak3")) {
-                                Text(stringResource(R.string.save_ak3_log))
-                            } else if (navController.currentDestination!!.route!!.endsWith("/backup/backup")) {
-                                Text(stringResource(R.string.save_backup_log))
-                            } else {
-                                Text(stringResource(R.string.save_flash_log))
-                            }
+                            Text(stringResource(R.string.save_ak3_log))
                         }
                     }
-                    if (navController.currentDestination!!.route!!.contains("ak3")) {
-                        AnimatedVisibility(!navController.currentDestination!!.route!!.endsWith("/backups/{backupId}/flash/ak3") && viewModel.wasFlashSuccess.value != false) {
+                    if (isAk3) {
+                        AnimatedVisibility(!currentRoute.endsWith("/backups/{backupId}/flash/ak3") && viewModel.wasFlashSuccess.value != false) {
                             OutlinedButton(
                                 modifier = Modifier
                                     .fillMaxWidth(),
@@ -217,25 +216,23 @@ fun ColumnScope.SlotFlashContent(
 							},
 							confirmButton = {
 								DialogButton(
-									"CHANGE SLOT",
-									{
-										viewModel.hideCautionDialog()
-										viewModel.switchSlot(context)
-									}
-								)
-							},
+									"CHANGE SLOT"
+                                ) {
+                                    viewModel.hideCautionDialog()
+                                    viewModel.switchSlot(context)
+                                }
+                            },
 							dismissButton = {
 								DialogButton(
-									"CANCEL",
-									{
-										viewModel.hideCautionDialog()
-									}
-								)
-							},
+									"CANCEL"
+                                ) {
+                                    viewModel.hideCautionDialog()
+                                }
+                            },
 							modifier = Modifier.padding(16.dp)
 						)
 					}
-                    if (viewModel.wasFlashSuccess.value != false && navController.currentDestination!!.route!!.endsWith("/backup/backup")) {
+                    if (viewModel.wasFlashSuccess.value != false && isBackupResult) {
                         OutlinedButton(
                             modifier = Modifier
                                 .fillMaxWidth(),
@@ -287,63 +284,63 @@ fun ColumnScope.SlotFlashContent(
             },
             confirmButton = {
                 DialogButton(
-                    "Flash",
-                    {
-                        viewModel.hideConfirmDialog()
-                        val isOtherFlash = viewModel.flashActionType != "flashImage" && viewModel.flashActionURI != null
-                        val isPartitionFlash = viewModel.flashActionType == "flashImage" && viewModel.flashActionPartName != null && viewModel.flashActionURI != null
+                    "Flash"
+                ) {
+                    viewModel.hideConfirmDialog()
+                    val isOtherFlash =
+                        viewModel.flashActionType != "flashImage" && viewModel.flashActionURI != null
+                    val isPartitionFlash =
+                        viewModel.flashActionType == "flashImage" && viewModel.flashActionPartName != null && viewModel.flashActionURI != null
 
-                        if (isOtherFlash || isPartitionFlash) {
-                            val uri = viewModel.flashActionURI!!
-                            val partitionName: String? = viewModel.flashActionPartName
+                    if (isOtherFlash || isPartitionFlash) {
+                        val uri = viewModel.flashActionURI!!
+                        val partitionName: String? = viewModel.flashActionPartName
 
-                            when (viewModel.flashActionType) {
-                                "flashAk3" -> {
-                                    navController.navigate("slot$slotSuffix/flash/ak3") {
-                                        popUpTo("slot$slotSuffix")
-                                    }
-                                    viewModel.flashAk3(context, uri)
+                        when (viewModel.flashActionType) {
+                            "flashAk3" -> {
+                                navController.navigate("slot$slotSuffix/flash/ak3") {
+                                    popUpTo("slot$slotSuffix")
                                 }
-
-                                "flashAk3_mkbootfs" -> {
-                                    navController.navigate("slot$slotSuffix/flash/ak3") {
-                                        popUpTo("slot$slotSuffix")
-                                    }
-                                    viewModel.flashAk3_mkbootfs(context, uri)
-                                }
-
-                                "flashKsuDriver" -> {
-                                    navController.navigate("slot$slotSuffix/flash/image/flash") {
-                                        popUpTo("slot$slotSuffix")
-                                    }
-                                    viewModel.flashKsuDriver(context, uri)
-                                }
-
-                                "flashImage" -> {
-                                    navController.navigate("slot$slotSuffix/flash/image/flash") {
-                                        popUpTo("slot$slotSuffix")
-                                    }
-                                    viewModel.flashImage(
-                                        context,
-                                        uri,
-                                        partitionName!!
-                                    )
-                                }
+                                viewModel.flashAk3(context, uri)
                             }
-                            viewModel.flashActionType = ""
-                            viewModel.flashActionURI = null
-                            viewModel.flashActionPartName = null
+
+                            "flashAk3_mkbootfs" -> {
+                                navController.navigate("slot$slotSuffix/flash/ak3") {
+                                    popUpTo("slot$slotSuffix")
+                                }
+                                viewModel.flashAk3_mkbootfs(context, uri)
+                            }
+
+                            "flashKsuDriver" -> {
+                                navController.navigate("slot$slotSuffix/flash/image/flash") {
+                                    popUpTo("slot$slotSuffix")
+                                }
+                                viewModel.flashKsuDriver(context, uri)
+                            }
+
+                            "flashImage" -> {
+                                navController.navigate("slot$slotSuffix/flash/image/flash") {
+                                    popUpTo("slot$slotSuffix")
+                                }
+                                viewModel.flashImage(
+                                    context,
+                                    uri,
+                                    partitionName!!
+                                )
+                            }
                         }
+                        viewModel.flashActionType = ""
+                        viewModel.flashActionURI = null
+                        viewModel.flashActionPartName = null
                     }
-                )
+                }
             },
             dismissButton = {
                 DialogButton(
-                    "CANCEL",
-                    {
-                        viewModel.hideConfirmDialog()
-                    }
-                )
+                    "CANCEL"
+                ) {
+                    viewModel.hideConfirmDialog()
+                }
             },
             modifier = Modifier.padding(16.dp)
         )

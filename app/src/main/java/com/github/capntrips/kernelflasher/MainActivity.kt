@@ -75,6 +75,7 @@ import java.io.File
 import kotlin.system.exitProcess
 
 object SharedViewModels {
+    @OptIn(ExperimentalSerializationApi::class)
     lateinit var mainViewModel: MainViewModel
 }
 
@@ -202,10 +203,14 @@ class MainActivity : ComponentActivity() {
         val action = intent?.action ?: return
         val uri = when (action) {
             Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            Intent.ACTION_SEND -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            }
             else -> null
         } ?: return
-        Log.d(MainViewModel.Companion.TAG, intent?.data.toString())
 
         if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_SEND) {
             if(uri.scheme == "content" && DocumentsContract.isDocumentUri(this, uri)) {
@@ -339,7 +344,7 @@ class MainActivity : ComponentActivity() {
                     val slotContentA: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
                         val slotSuffix = "_a"
                         val slotViewModel = slotViewModelA
-                        if (slotViewModel!!.wasFlashSuccess.value != null && listOf("slot{slotSuffix}", "slot").any { navController.currentDestination!!.route.equals(it) }) {
+                        if (slotViewModel.wasFlashSuccess.value != null && listOf("slot{slotSuffix}", "slot").any { navController.currentDestination!!.route.equals(it) }) {
                             slotViewModel.clearFlash(this@MainActivity)
                         }
                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true) {
@@ -361,7 +366,7 @@ class MainActivity : ComponentActivity() {
                     val slotContent: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
                         val slotSuffix = ""
                         val slotViewModel = slotViewModelA
-                        if (slotViewModel!!.wasFlashSuccess.value != null && listOf("slot{slotSuffix}", "slot").any { navController.currentDestination!!.route.equals(it) }) {
+                        if (slotViewModel.wasFlashSuccess.value != null && listOf("slot{slotSuffix}", "slot").any { navController.currentDestination!!.route.equals(it) }) {
                             slotViewModel.clearFlash(this@MainActivity)
                         }
                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true) {
@@ -373,7 +378,7 @@ class MainActivity : ComponentActivity() {
                         val slotSuffix = "_a"
                         val slotViewModel = slotViewModelA
                         RefreshableScreen(mainViewModel, navController) {
-                            SlotFlashContent(slotViewModel!!, slotSuffix, navController)
+                            SlotFlashContent(slotViewModel, slotSuffix, navController)
                         }
                     }
                     val slotFlashContentB: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
@@ -387,7 +392,7 @@ class MainActivity : ComponentActivity() {
                         val slotSuffix = ""
                         val slotViewModel = slotViewModelA
                         RefreshableScreen(mainViewModel, navController) {
-                            SlotFlashContent(slotViewModel!!, slotSuffix, navController)
+                            SlotFlashContent(slotViewModel, slotSuffix, navController)
                         }
                     }
                     val slotBackupsContentA: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
@@ -399,7 +404,7 @@ class MainActivity : ComponentActivity() {
                             backupsViewModel.clearCurrent()
                         }
                         RefreshableScreen(mainViewModel, navController) {
-                            SlotBackupsContent(slotViewModel!!, backupsViewModel, slotSuffix, navController)
+                            SlotBackupsContent(slotViewModel, backupsViewModel, slotSuffix, navController)
                         }
                     }
                     val slotBackupsContentB: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
@@ -423,7 +428,7 @@ class MainActivity : ComponentActivity() {
                             backupsViewModel.clearCurrent()
                         }
                         RefreshableScreen(mainViewModel, navController) {
-                            SlotBackupsContent(slotViewModel!!, backupsViewModel, slotSuffix, navController)
+                            SlotBackupsContent(slotViewModel, backupsViewModel, slotSuffix, navController)
                         }
                     }
                     val slotBackupFlashContentA: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit = { backStackEntry ->
@@ -432,7 +437,7 @@ class MainActivity : ComponentActivity() {
                         backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                         if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
                             RefreshableScreen(mainViewModel, navController) {
-                                SlotFlashContent(slotViewModel!!, slotSuffix, navController)
+                                SlotFlashContent(slotViewModel, slotSuffix, navController)
                             }
                         }
 
@@ -454,7 +459,7 @@ class MainActivity : ComponentActivity() {
                         backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                         if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
                             RefreshableScreen(mainViewModel, navController) {
-                                SlotFlashContent(slotViewModel!!, slotSuffix, navController)
+                                SlotFlashContent(slotViewModel, slotSuffix, navController)
                             }
                         }
 
@@ -570,14 +575,14 @@ class MainActivity : ComponentActivity() {
                         onDismissRequest = { viewModel!!.hideUpdateDialog() },
                         title = {
                             Text(
-                                dialogData!!.title,
+                                dialogData.title,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                         },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                dialogData!!.changelog.forEach {
+                                dialogData.changelog.forEach {
                                     Text(it, fontWeight = FontWeight.Bold)
                                 }
                             }
@@ -585,7 +590,7 @@ class MainActivity : ComponentActivity() {
                         confirmButton = {
                             DialogButton("Update APK") {
                                 viewModel!!.hideUpdateDialog()
-                                dialogData!!.onConfirm()
+                                dialogData.onConfirm()
                             }
                         },
                         dismissButton = {
