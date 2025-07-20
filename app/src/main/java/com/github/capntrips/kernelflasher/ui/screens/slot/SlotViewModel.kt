@@ -653,8 +653,12 @@ class SlotViewModel(
                 val files = File(context.filesDir.canonicalPath)
                 val flashScript = File(files, "flash_ak3$type.sh")
                 val result = Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER).build().newJob().add("F=$files Z=\"$zip\" /system/bin/sh $flashScript").to(flashOutput, flashOutput).exec()
-                if (result.isSuccess) {
-                    log(context, "Kernel flashed successfully")
+                val outputTail = flashOutput.takeLast(5).joinToString("\n")
+                val fakeFail = "sched_setattr: not found" in outputTail &&
+                        "Done!" in outputTail &&
+                        result.code == 127
+                if (result.isSuccess || fakeFail) {
+                    log(context, "AnyKernel Zip flashed successfully")
                     _wasFlashSuccess.value = true
                 } else {
                     log(context, "Failed to flash zip", shouldThrow = false)
