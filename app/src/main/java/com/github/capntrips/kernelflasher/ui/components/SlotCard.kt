@@ -82,13 +82,13 @@ fun SlotCard(
         if(isSlotScreen && viewModel.slotSuffix != "")
         {
             DataRow(
-                label = "Unbootable",
+                label = stringResource(R.string.unbootable),
                 value = viewModel.slotInfo.bootSlotInfo.unbootable ?: stringResource(R.string.not_found),
                 mutableMaxWidth = cardWidth,
                 valueColor = if (viewModel.slotInfo.bootSlotInfo.unbootable == "Yes") Color.Red else Color.Unspecified
             )
             DataRow(
-                label = "Successful",
+                label = stringResource(R.string.successful),
                 value = viewModel.slotInfo.bootSlotInfo.successful ?: stringResource(R.string.not_found),
                 mutableMaxWidth = cardWidth,
                 valueColor = if (viewModel.slotInfo.bootSlotInfo.successful == "No") Color.Red else Color.Unspecified
