@@ -73,18 +73,30 @@ fun SettingsContent(
 
     var langExpanded by remember { mutableStateOf(false) }
     val currentLang = LanguageManager.getCurrentLanguage()
+    val langDisplay = when (currentLang) {
+        "en" -> "English"
+        "zh-TW" -> "繁體中文（台灣）"
+        "zh-HK" -> "繁體中文（香港）"
+        else -> "简体中文"
+    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.language), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         Box {
             OutlinedButton(onClick = { langExpanded = true }) {
-                Text(if (currentLang == "zh") stringResource(R.string.language_zh) else stringResource(R.string.language_en))
+                Text(langDisplay)
             }
             DropdownMenu(expanded = langExpanded, onDismissRequest = { langExpanded = false }) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.language_zh)) }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("zh")
+                DropdownMenuItem(text = { Text("简体中文") }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("zh-CN", context)
                 })
-                DropdownMenuItem(text = { Text(stringResource(R.string.language_en)) }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("en")
+                DropdownMenuItem(text = { Text("繁體中文（香港）") }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("zh-HK", context)
+                })
+                DropdownMenuItem(text = { Text("繁體中文（台灣）") }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("zh-TW", context)
+                })
+                DropdownMenuItem(text = { Text("English") }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("en", context)
                 })
             }
         }

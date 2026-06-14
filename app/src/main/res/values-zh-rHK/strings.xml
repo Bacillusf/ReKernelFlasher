@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">ReKernelFlasher</string>
     <string name="root_required">需要 Root 權限</string>
-    <string name="root_service_disconnected">Root 服務已斷開</string>
+    <string name="root_service_disconnected">Root 服務已中斷</string>
     <string name="device">裝置</string>
     <string name="model">型號</string>
     <string name="build_number">構建版本</string>
@@ -15,7 +15,7 @@
     <string name="boot_sha1">Boot SHA1</string>
     <string name="vendor_dlkm">Vendor DLKM</string>
     <string name="exists">存在</string>
-    <string name="not_found">未找到</string>
+    <string name="not_found">未搵到</string>
     <string name="mounted">已掛載</string>
     <string name="unmounted">未掛載</string>
     <string name="view">檢視</string>
@@ -39,12 +39,12 @@
     <string name="map_vendor_dlkm">映射 Vendor DLKM</string>
     <string name="unmap_vendor_dlkm">取消映射 Vendor DLKM</string>
     <string name="migrate">遷移</string>
-    <string name="no_backups_found">未找到備份</string>
+    <string name="no_backups_found">未搵到備份</string>
     <string name="delete">刪除</string>
     <string name="add">新增</string>
     <string name="url">URL</string>
     <string name="version">版本</string>
-    <string name="date_released">發布日期</string>
+    <string name="date_released">發佈日期</string>
     <string name="last_updated">最後更新</string>
     <string name="changelog">變更日誌</string>
     <string name="check_for_updates">檢查更新</string>
