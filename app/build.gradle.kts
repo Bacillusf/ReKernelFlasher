@@ -8,10 +8,10 @@ plugins {
 
 android {
     compileSdk = 36
-    namespace = "com.github.capntrips.kernelflasher"
+    namespace = "safe.kernel.flash"
 
     defaultConfig {
-        applicationId = "com.github.capntrips.kernelflasher"
+        applicationId = "safe.kernel.flash"
         minSdk = 29
         targetSdk = 36
         versionCode = 10600

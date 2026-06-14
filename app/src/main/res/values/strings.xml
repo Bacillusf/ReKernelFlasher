@@ -71,5 +71,21 @@
     <string name="active">Active</string>
     <string name="unbootable">Unbootable</string>
     <string name="successful">Successful</string>
+    <string name="android_version">Android版本</string>
+    <string name="app_version">应用版本</string>
+    <string name="root_manager">Root管理器</string>
+    <string name="dpi_scale">界面缩放</string>
+    <string name="apply">应用</string>
+    <string name="tab_home">首页</string>
+    <string name="tab_flash">刷写</string>
+    <string name="tab_settings">设置</string>
+    <string name="operation_history">操作历史</string>
+    <string name="no_history">暂无操作记录</string>
+    <string name="clear_history">清除历史</string>
+    <string name="cancel">取消</string>
+    <string name="auto_backup">自动备份</string>
+    <string name="view_autobackup_records">查看自动备份记录</string>
+    <string name="manage">管理</string>
+    <string name="diagnostics">诊断</string>
     <!-- TODO: Make error and success messages string resources -->
 </resources>
