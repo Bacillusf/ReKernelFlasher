@@ -5,6 +5,8 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 基于 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 二次开发。
 
 ---
+## 灵感
+原版KernelFlasher对新手很不友好，没有二次弹窗确认，容易刷错分区，很多新手没有备份意识，刷错了只能无助的等待全量包...而且原仓库已经归档，于是我做了这个分支
 
 ## 功能
 
@@ -93,7 +95,7 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 
 ## 许可证
 
-MIT License
+GPL v3.0 License
 
 ---
 
@@ -109,3 +111,4 @@ MIT License
 - **Root 管理器显示**：首页显示当前 Root 方案
 - **文件定位**：长按自动备份记录调用系统打开文件
 - **包名变更**：`safe.kernel.flash`
+- **解决部分手机兼容性问题**: 解决了Invalid ramdisk in boot.img
