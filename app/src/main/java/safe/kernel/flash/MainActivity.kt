@@ -170,9 +170,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         LanguageManager.init(this)
         LanguageManager.applySavedLanguage()
-        requestWindowFeature(Window.FEATURE_NO_TITLE) // Hide the title bar
-        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        val splashScreen = installSplashScreen()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val isZipIntent = intent?.action == Intent.ACTION_VIEW &&

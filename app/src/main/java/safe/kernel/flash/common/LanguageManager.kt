@@ -3,6 +3,7 @@ package safe.kernel.flash.common
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 
@@ -29,7 +30,7 @@ object LanguageManager {
             else -> LocaleListCompat.forLanguageTags("zh-CN")
         }
         AppCompatDelegate.setApplicationLocales(locale)
-        activity.recreate()
+        Toast.makeText(activity, "已切换语言，重启应用后生效", Toast.LENGTH_SHORT).show()
     }
 
     fun applySavedLanguage() {
