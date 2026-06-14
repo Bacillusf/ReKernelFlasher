@@ -267,6 +267,7 @@ class SlotViewModel(
 	}
 
     fun showConfirmDialog() {
+        _ak3PreviewInfo.value = null
         _showConfirmDialog.value = true
     }
 
@@ -303,14 +304,17 @@ class SlotViewModel(
                 val props = mutableMapOf<String, String>()
                 content.lines().forEach { line ->
                     val trimmed = line.trim()
+                        .trimStart('\'')
+                        .trimEnd('\'', ';')
+                        .trim()
                     if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && trimmed.contains("=")) {
                         val eqIdx = trimmed.indexOf("=")
                         val key = trimmed.substring(0, eqIdx).trim()
-                        val value = trimmed.substring(eqIdx + 1).trim().trim('"')
+                        val value = trimmed.substring(eqIdx + 1).trim().trim('"', '\'')
                         props[key] = value
                     }
                 }
-                val deviceNames = props.filter { it.key.startsWith("device.name") }
+                val deviceNames = props.filter { it.key.startsWith("device.name") && it.value.isNotEmpty() }
                     .entries.sortedBy { it.key }.map { it.value }
                 val block = props["block"] ?: ""
                 val kernelString = props["kernel.string"] ?: ""

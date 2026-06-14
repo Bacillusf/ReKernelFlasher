@@ -291,9 +291,11 @@ fun ColumnScope.SlotFlashContent(
         val ak3Info = viewModel._ak3PreviewInfo.value
         val ak3Detail = if (isAk3 && ak3Info != null) {
             buildString {
+                val status = if (ak3Info.isCompatible) "✓" else "✗"
                 if (ak3Info.deviceNames.isNotEmpty()) {
-                    val status = if (ak3Info.isCompatible) "✓" else "✗"
                     append("目标设备: ${ak3Info.deviceNames.joinToString(", ")} $status")
+                } else {
+                    append("目标设备: Unknown $status")
                 }
                 if (ak3Info.block.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")

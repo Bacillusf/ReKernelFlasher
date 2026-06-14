@@ -73,5 +73,6 @@ fun FlashButton(
             }
         }
         mainActivity.isAwaitingResult = false
+        result.value = null
     }
 }
