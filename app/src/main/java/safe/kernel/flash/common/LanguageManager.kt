@@ -3,9 +3,11 @@ package safe.kernel.flash.common
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
+import android.content.res.Configuration
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import java.util.Locale
 
 object LanguageManager {
     private const val PREFS_NAME = "rekf_settings"
@@ -14,7 +16,9 @@ object LanguageManager {
     private var prefs: SharedPreferences? = null
 
     fun init(context: Context) {
-        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs == null) {
+            prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        }
     }
 
     fun getCurrentLanguage(): String {
@@ -23,23 +27,29 @@ object LanguageManager {
 
     fun setLanguage(language: String, activity: Activity) {
         prefs?.edit()?.putString(KEY_LANGUAGE, language)?.apply()
-        val locale = when (language) {
-            "en" -> LocaleListCompat.forLanguageTags("en")
-            "zh-TW" -> LocaleListCompat.forLanguageTags("zh-TW")
-            "zh-HK" -> LocaleListCompat.forLanguageTags("zh-HK")
-            else -> LocaleListCompat.forLanguageTags("zh-CN")
-        }
-        AppCompatDelegate.setApplicationLocales(locale)
-        Toast.makeText(activity, "已切换语言，重启应用后生效", Toast.LENGTH_SHORT).show()
+        Handler(Looper.getMainLooper()).postDelayed({
+            activity.recreate()
+        }, 100)
     }
 
-    fun applySavedLanguage() {
-        val locale = when (getCurrentLanguage()) {
-            "en" -> LocaleListCompat.forLanguageTags("en")
-            "zh-TW" -> LocaleListCompat.forLanguageTags("zh-TW")
-            "zh-HK" -> LocaleListCompat.forLanguageTags("zh-HK")
-            else -> LocaleListCompat.forLanguageTags("zh-CN")
+    fun applyContextLocale(context: Context): Context {
+        val language = getCurrentLanguage()
+        val tag = when (language) {
+            "en" -> "en"
+            "zh-TW" -> "zh-TW"
+            "zh-HK" -> "zh-HK"
+            else -> "zh"
         }
-        AppCompatDelegate.setApplicationLocales(locale)
+        val locale = Locale.forLanguageTag(tag)
+        Locale.setDefault(locale)
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            context.createConfigurationContext(config)
+        } else {
+            @Suppress("DEPRECATION")
+            context.resources.updateConfiguration(config, context.resources.displayMetrics)
+            context
+        }
     }
 }

@@ -5,6 +5,7 @@ import android.animation.PropertyValuesHolder
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.net.Uri
@@ -167,9 +168,13 @@ class MainActivity : ComponentActivity() {
         Shell.cmd("chmod +x $dest").exec()
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        LanguageManager.init(newBase.applicationContext)
+        super.attachBaseContext(LanguageManager.applyContextLocale(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         LanguageManager.init(this)
-        LanguageManager.applySavedLanguage()
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         val splashScreen = installSplashScreen()
