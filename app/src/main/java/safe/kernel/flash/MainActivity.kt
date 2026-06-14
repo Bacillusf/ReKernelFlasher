@@ -71,6 +71,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import safe.kernel.flash.common.LanguageManager
 import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.DialogButton
 import safe.kernel.flash.ui.screens.RefreshableScreen
@@ -167,6 +168,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        LanguageManager.init(this)
+        LanguageManager.applySavedLanguage()
         requestWindowFeature(Window.FEATURE_NO_TITLE) // Hide the title bar
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)

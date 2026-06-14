@@ -1,10 +1,13 @@
 package safe.kernel.flash.ui.screens.main
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -25,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import safe.kernel.flash.R
 import safe.kernel.flash.common.AutoBackupManager
+import safe.kernel.flash.common.LanguageManager
 import kotlinx.serialization.ExperimentalSerializationApi
 
 @ExperimentalMaterial3Api
@@ -60,6 +65,29 @@ fun SettingsContent(
         OutlinedButton(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp),
             onClick = { navController.navigate("autobackup") }
         ) { Text(stringResource(R.string.view_autobackup_records)) }
+    }
+
+    Spacer(Modifier.height(16.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    Spacer(Modifier.height(16.dp))
+
+    var langExpanded by remember { mutableStateOf(false) }
+    val currentLang = LanguageManager.getCurrentLanguage()
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.language), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Box {
+            OutlinedButton(onClick = { langExpanded = true }) {
+                Text(if (currentLang == "zh") stringResource(R.string.language_zh) else stringResource(R.string.language_en))
+            }
+            DropdownMenu(expanded = langExpanded, onDismissRequest = { langExpanded = false }) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.language_zh)) }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("zh")
+                })
+                DropdownMenuItem(text = { Text(stringResource(R.string.language_en)) }, onClick = {
+                    langExpanded = false; LanguageManager.setLanguage("en")
+                })
+            }
+        }
     }
 
     Spacer(Modifier.height(16.dp))
