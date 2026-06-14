@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kernel Flasher</string>
+    <string name="app_name">ReKernelFlasher</string>
     <string name="root_required">Wymagane uprawnienia Superużytkownika</string>
     <string name="root_service_disconnected">Usługa Superużytkownika została odłączona</string>
     <string name="device">Urządzenie</string>

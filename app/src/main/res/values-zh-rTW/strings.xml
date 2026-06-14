@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kernel Flasher</string>
+    <string name="app_name">ReKernelFlasher</string>
     <string name="root_required">需要 Root 授權</string>
     <string name="root_service_disconnected">Root 服務已斷開</string>
     <string name="device">裝置</string>

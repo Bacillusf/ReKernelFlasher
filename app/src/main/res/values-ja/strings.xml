@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-  <string name="app_name">Kernel Flasher</string>
+  <string name="app_name">ReKernelFlasher</string>
   <string name="root_required">Root 権限が必要です</string>
   <string name="root_service_disconnected">Root サービスが切断されました</string>
   <string name="device">デバイス</string>
