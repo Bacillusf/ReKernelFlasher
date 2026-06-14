@@ -1,5 +1,6 @@
 package safe.kernel.flash.ui.screens.main
 
+import android.app.Activity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,6 +73,7 @@ fun SettingsContent(
     Spacer(Modifier.height(16.dp))
 
     var langExpanded by remember { mutableStateOf(false) }
+    val activity = context as Activity
     val currentLang = LanguageManager.getCurrentLanguage()
     val langDisplay = when (currentLang) {
         "en" -> "English"
@@ -87,16 +89,16 @@ fun SettingsContent(
             }
             DropdownMenu(expanded = langExpanded, onDismissRequest = { langExpanded = false }) {
                 DropdownMenuItem(text = { Text("简体中文") }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("zh-CN", context)
+                    langExpanded = false; LanguageManager.setLanguage("zh-CN", activity)
                 })
                 DropdownMenuItem(text = { Text("繁體中文（香港）") }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("zh-HK", context)
+                    langExpanded = false; LanguageManager.setLanguage("zh-HK", activity)
                 })
                 DropdownMenuItem(text = { Text("繁體中文（台灣）") }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("zh-TW", context)
+                    langExpanded = false; LanguageManager.setLanguage("zh-TW", activity)
                 })
                 DropdownMenuItem(text = { Text("English") }, onClick = {
-                    langExpanded = false; LanguageManager.setLanguage("en", context)
+                    langExpanded = false; LanguageManager.setLanguage("en", activity)
                 })
             }
         }

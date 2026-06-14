@@ -168,7 +168,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        LanguageManager.init(this, MainActivity::class.java)
+        LanguageManager.init(this)
         LanguageManager.applySavedLanguage()
         requestWindowFeature(Window.FEATURE_NO_TITLE) // Hide the title bar
         val splashScreen = installSplashScreen()
