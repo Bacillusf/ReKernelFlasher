@@ -272,6 +272,64 @@ class SlotViewModel(
 
     fun hideConfirmDialog() {
         _showConfirmDialog.value = false
+        _ak3PreviewInfo.value = null
+    }
+
+    data class Ak3PreviewInfo(
+        val deviceNames: List<String> = emptyList(),
+        val block: String = "",
+        val kernelString: String = "",
+        val doDeviceCheck: Boolean = false,
+        val isCompatible: Boolean = true,
+        val rawProps: Map<String, String> = emptyMap()
+    )
+
+    val _ak3PreviewInfo: MutableState<Ak3PreviewInfo?> = mutableStateOf(null)
+
+    suspend fun parseAk3Preview(context: Context) {
+        val uri = flashActionURI ?: return
+        if (flashActionType !in listOf("flashAk3", "flashAk3_mkbootfs")) return
+        try {
+            val zipFile = run {
+                val source = context.contentResolver.openInputStream(uri) ?: return
+                val tmpFile = File(context.filesDir, "ak3_preview_tmp.zip")
+                tmpFile.outputStream().use { source.copyTo(it) }
+                source.close()
+                ZipFile(tmpFile)
+            }
+            zipFile.use { zip ->
+                val entry = zip.getEntry("anykernel.sh") ?: return
+                val content = zip.getInputStream(entry).bufferedReader().readText()
+                val props = mutableMapOf<String, String>()
+                content.lines().forEach { line ->
+                    val trimmed = line.trim()
+                    if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && trimmed.contains("=")) {
+                        val eqIdx = trimmed.indexOf("=")
+                        val key = trimmed.substring(0, eqIdx).trim()
+                        val value = trimmed.substring(eqIdx + 1).trim().trim('"')
+                        props[key] = value
+                    }
+                }
+                val deviceNames = props.filter { it.key.startsWith("device.name") }
+                    .entries.sortedBy { it.key }.map { it.value }
+                val block = props["block"] ?: ""
+                val kernelString = props["kernel.string"] ?: ""
+                val doDeviceCheck = props["do.devicecheck"]?.equals("1", ignoreCase = true) == true
+
+                val currentDevice = Shell.cmd("getprop ro.product.device").exec().out.firstOrNull() ?: ""
+                val isCompatible = if (!doDeviceCheck || deviceNames.isEmpty()) true
+                else deviceNames.any { currentDevice.contains(it, ignoreCase = true) }
+
+                _ak3PreviewInfo.value = Ak3PreviewInfo(
+                    deviceNames = deviceNames,
+                    block = block,
+                    kernelString = kernelString,
+                    doDeviceCheck = doDeviceCheck,
+                    isCompatible = isCompatible,
+                    rawProps = props
+                )
+            }
+        } catch (_: Exception) {}
     }
 
     // TODO: use base class for common functions

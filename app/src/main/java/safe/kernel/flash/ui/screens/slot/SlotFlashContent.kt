@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -280,6 +281,33 @@ fun ColumnScope.SlotFlashContent(
             else -> "本机"
         }
 
+        val isAk3 = viewModel.flashActionType in listOf("flashAk3", "flashAk3_mkbootfs")
+        LaunchedEffect(viewModel.showConfirmDialog, isAk3) {
+            if (viewModel.showConfirmDialog && isAk3) {
+                viewModel.parseAk3Preview(context)
+            }
+        }
+
+        val ak3Info = viewModel._ak3PreviewInfo.value
+        val ak3Detail = if (isAk3 && ak3Info != null) {
+            buildString {
+                if (ak3Info.deviceNames.isNotEmpty()) {
+                    val status = if (ak3Info.isCompatible) "✓" else "✗"
+                    append("目标设备: ${ak3Info.deviceNames.joinToString(", ")} $status")
+                }
+                if (ak3Info.block.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("目标分区: ${ak3Info.block}")
+                }
+                if (ak3Info.kernelString.isNotEmpty()) {
+                    if (isNotEmpty()) append("\n")
+                    append("内核标识: ${ak3Info.kernelString}")
+                }
+                if (isNotEmpty()) append("\n")
+                append("设备检查: ${if (ak3Info.doDeviceCheck) "开启" else "关闭"}")
+            }
+        } else null
+
         val title = "CAUTION!"
         val message = when (viewModel.flashActionType) {
             "flashImage" -> "确定要将 $sourcePath 刷写到 $destPath 吗？"
@@ -288,14 +316,14 @@ fun ColumnScope.SlotFlashContent(
             "flashKsuDriver" -> "确定要将 $sourcePath 作为 KernelSU 驱动\n刷写到 $destPath 吗？"
             else -> "确定要将 $sourcePath 刷写到本机吗？"
         }
-        val confirmText = "刷写"
+        val confirmText = if (isAk3 && ak3Info != null && !ak3Info.isCompatible) "强行刷写（不兼容）" else "刷写"
         val cancelText = stringResource(R.string.cancel)
 
         AnimatedConfirmDialog(
             visible = true,
             title = title,
             message = message,
-            detail = null,
+            detail = ak3Detail,
             confirmText = confirmText,
             cancelText = cancelText,
             onConfirm = {
