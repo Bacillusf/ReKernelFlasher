@@ -15,11 +15,11 @@ import java.util.Base64
 object AutoBackupManager {
     private const val TAG = "AutoBackupManager"
     @SuppressLint("SdCardPath")
-    private const val BACKUP_DIR = "/sdcard/KernelFlasher-AutoBackup"
+    private const val BACKUP_DIR = "/sdcard/ReKernelFlasher/Autobackup"
     @SuppressLint("SdCardPath")
-    private const val CONFIG_FILE = "/sdcard/KernelFlasher/autobackup_enabled"
+    private const val CONFIG_FILE = "/sdcard/ReKernelFlasher/autobackup_enabled"
     @SuppressLint("SdCardPath")
-    private const val SUMMARY_FILE = "/sdcard/KernelFlasher-AutoBackup/summary.json"
+    private const val SUMMARY_FILE = "/sdcard/ReKernelFlasher/Autobackup/summary.json"
 
     val isEnabled = mutableStateOf(false)
     private var fileSystemManager: FileSystemManager? = null
@@ -70,6 +70,7 @@ object AutoBackupManager {
                 Log.e(TAG, "dd failed: ${result.err.joinToString("\n")}")
                 return null
             }
+            Shell.cmd("chmod 644 $imgPath").exec()
 
             Shell.cmd("echo \"timestamp: $timestamp\" > $dirPath/backup.yml").exec()
             Shell.cmd("echo \"partition: $partitionName\" >> $dirPath/backup.yml").exec()

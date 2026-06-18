@@ -89,7 +89,7 @@ class BackupsViewModel(
         // Deprecated: Backup migration will be removed in the first stable release
         _needsMigration.value = oldBackupsDir.exists() && oldBackupsDir.listFiles()?.size!! > 0
         @SuppressLint("SdCardPath")
-        val externalDir = File("/sdcard/KernelFlasher")
+        val externalDir = File("/sdcard/ReKernelFlasher")
         val backupsDir = fileSystemManager.getFile("$externalDir/backups")
         if (backupsDir.exists()) {
             val children = backupsDir.listFiles()
@@ -205,7 +205,7 @@ class BackupsViewModel(
         launch {
             _clearRestore()
             @SuppressLint("SdCardPath")
-            val externalDir = File("/sdcard/KernelFlasher")
+            val externalDir = File("/sdcard/ReKernelFlasher")
             val backupsDir = fileSystemManager.getFile("$externalDir/backups")
             val backupDir = backupsDir.getChildFile(currentBackup!!)
             if (!backupDir.exists()) {
@@ -226,7 +226,7 @@ class BackupsViewModel(
     fun delete(context: Context, callback: () -> Unit) {
         launch {
             @SuppressLint("SdCardPath")
-            val externalDir = File("/sdcard/KernelFlasher")
+            val externalDir = File("/sdcard/ReKernelFlasher")
             val backupsDir = fileSystemManager.getFile("$externalDir/backups")
             val backupDir = backupsDir.getChildFile(currentBackup!!)
             if (!backupDir.exists()) {
@@ -247,10 +247,10 @@ class BackupsViewModel(
     @Deprecated("Backup migration will be removed in the first stable release")
     fun migrate(context: Context) {
         launch {
-            val externalDir = fileSystemManager.getFile("/sdcard/KernelFlasher")
+            val externalDir = fileSystemManager.getFile("/sdcard/ReKernelFlasher")
             if (!externalDir.exists()) {
                 if (!externalDir.mkdir()) {
-                    log(context, "Failed to create KernelFlasher dir on /sdcard", shouldThrow = true)
+                    log(context, "Failed to create ReKernelFlasher dir on /sdcard", shouldThrow = true)
                 }
             }
             val backupsDir = externalDir.getChildFile("backups")

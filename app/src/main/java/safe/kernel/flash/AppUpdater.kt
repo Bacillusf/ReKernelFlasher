@@ -1,25 +1,29 @@
 package safe.kernel.flash
 
 import android.annotation.SuppressLint
-import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
-import android.os.Environment
 import android.widget.Toast
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.FileProvider
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 interface GitHubApi {
     @GET("repos/Bacillusf/ReKernelFlasher/releases/latest")
@@ -45,12 +49,17 @@ object AppUpdater {
         .build()
         .create(GitHubApi::class.java)
 
-    // Compares version strings (e.g., v1.0.0 vs. v1.0.1)
     private fun isNewer(latest: String, current: String): Boolean {
         val latestParts = latest.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
         val currentParts = current.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
-
-        return latestParts.zip(currentParts).any { (l, c) -> l > c }
+        val maxLen = maxOf(latestParts.size, currentParts.size)
+        val lp = latestParts + List(maxLen - latestParts.size) { 0 }
+        val cp = currentParts + List(maxLen - currentParts.size) { 0 }
+        for (i in 0 until maxLen) {
+            if (lp[i] > cp[i]) return true
+            if (lp[i] < cp[i]) return false
+        }
+        return false
     }
 
     suspend fun hasActiveInternetConnection(): Boolean = withContext(Dispatchers.IO) {
@@ -60,69 +69,76 @@ object AppUpdater {
             connection.setRequestProperty("User-Agent", "Android")
             connection.connectTimeout = 1500
             connection.connect()
-            return@withContext connection.responseCode == 204
-        } catch (e: IOException) {
-            return@withContext false
-        }
+            connection.responseCode == 204
+        } catch (e: IOException) { false }
     }
 
-    // Checks if an update is available
-    suspend fun checkForUpdate(
+    data class UpdateInfo(
+        val version: String,
+        val body: String,
+        val downloadUrl: String
+    )
+
+    suspend fun checkForUpdate(currentVersion: String): UpdateInfo? {
+        return try {
+            val response = api.getLatestRelease()
+            if (response.isSuccessful) {
+                val release = response.body() ?: return null
+                val latestVersion = release.tagName.removePrefix("v")
+                if (isNewer(latestVersion, currentVersion)) {
+                    val apk = release.assets.find { it.name.endsWith(".apk") } ?: return null
+                    UpdateInfo(latestVersion, release.body, apk.downloadUrl)
+                } else null
+            } else null
+        } catch (e: Exception) { null }
+    }
+
+    suspend fun downloadWithProgress(
         context: Context,
-        currentVersion: String,
-        onShowDialog: (String, List<String>, () -> Unit) -> Unit
-    ) {
-        val response = api.getLatestRelease()
-        if (response.isSuccessful) {
-            val release = response.body() ?: return
-            val latestVersion = release.tagName.removePrefix("v")
-            if (isNewer(latestVersion, currentVersion)) {
-                val apk = release.assets.find { it.name.endsWith(".apk") } ?: return
-                val dialogTitle = "New version: $latestVersion"
-                val dialogLines = listOf(
-                    "Changelog:",
-                    *release.body.split("\n").toTypedArray()
-                )
-                val confirmAction = { downloadAndInstallApk(context, apk.downloadUrl, latestVersion) }
-                onShowDialog(dialogTitle, dialogLines, confirmAction)
-            }
-        }
-    }
-
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private fun downloadAndInstallApk(context: Context, url: String, latestVersion: String) {
-        Toast.makeText(context, "Downloading Update in Background. Don't perform any operations till update is completed!", Toast.LENGTH_LONG).show()
-        val request = DownloadManager.Request(Uri.parse(url))
-        request.setTitle("Kernel Flasher Latest Download")
-        request.setDescription("Downloading update...")
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Kernel_Flasher_$latestVersion.apk")
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-
-        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val id = manager.enqueue(request)
-
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context?, intent: Intent?) {
-                val downloadId = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-                if (id == downloadId) {
-                    val apkUri = manager.getUriForDownloadedFile(id)
-                    val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(apkUri, "application/vnd.android.package-archive")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        url: String,
+        version: String,
+        progress: MutableState<Float>,
+        onComplete: (File) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        try {
+            val client = OkHttpClient()
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            val body = response.body ?: return@withContext
+            val total = body.contentLength()
+            val file = File(context.filesDir, "update_$version.apk")
+            body.byteStream().use { input ->
+                FileOutputStream(file).use { output ->
+                    val buffer = ByteArray(8192)
+                    var downloaded = 0L
+                    var bytes: Int
+                    while (input.read(buffer).also { bytes = it } != -1) {
+                        output.write(buffer, 0, bytes)
+                        downloaded += bytes
+                        if (total > 0) {
+                            progress.value = downloaded.toFloat() / total
+                        }
                     }
-                    context.startActivity(installIntent)
                 }
             }
+            withContext(Dispatchers.Main) { onComplete(file) }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
+    }
 
-        val appContext = context.applicationContext
-        val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            appContext.registerReceiver(receiver, intentFilter, Context.RECEIVER_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            appContext.registerReceiver(receiver, intentFilter)
+    fun installApk(context: Context, file: File) {
+        try {
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "安装失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

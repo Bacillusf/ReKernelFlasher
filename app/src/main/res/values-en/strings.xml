@@ -89,4 +89,8 @@
     <string name="language">Language</string>
     <string name="language_zh">简体中文</string>
     <string name="language_en">English</string>
+    <string name="auto_backup_settings">Auto Backup Settings</string>
+    <string name="language_settings">Language Settings</string>
+    <string name="log_settings">Log Settings</string>
+    <string name="advanced_settings">Advanced Settings</string>
 </resources>

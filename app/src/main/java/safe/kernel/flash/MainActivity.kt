@@ -33,6 +33,7 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -50,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +89,10 @@ import safe.kernel.flash.ui.screens.main.FlashHomeContent
 import safe.kernel.flash.ui.screens.main.MainContent
 import safe.kernel.flash.ui.screens.main.MainViewModel
 import safe.kernel.flash.ui.screens.main.SettingsContent
+import safe.kernel.flash.ui.screens.main.AutoBackupSettingsContent
+import safe.kernel.flash.ui.screens.main.LanguageSettingsContent
+import safe.kernel.flash.ui.screens.main.LogSettingsContent
+import safe.kernel.flash.ui.screens.main.AdvancedSettingsContent
 import safe.kernel.flash.ui.screens.reboot.RebootContent
 import safe.kernel.flash.ui.screens.reboot.RebootViewModel
 import safe.kernel.flash.ui.screens.slot.SlotContent
@@ -318,14 +324,11 @@ class MainActivity : ComponentActivity() {
             }
 
             val context = LocalContext.current
-            val dialogData = viewModel!!.updateDialogData
             LaunchedEffect(Unit) {
-                if(AppUpdater.hasActiveInternetConnection()) {
-                    AppUpdater.checkForUpdate(
-                        context.applicationContext,
-                        BuildConfig.VERSION_NAME
-                    ) { title, lines, confirm ->
-                        viewModel!!.showUpdateDialog(title, lines, confirm)
+                if (AppUpdater.hasActiveInternetConnection()) {
+                    val info = AppUpdater.checkForUpdate(BuildConfig.VERSION_NAME)
+                    if (info != null) {
+                        viewModel!!.setUpdateInfo(info.version, info.body, info.downloadUrl)
                     }
                 }
 
@@ -376,7 +379,7 @@ class MainActivity : ComponentActivity() {
 
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
-                    val tabRoutes = listOf("main", "flash", "settings")
+                    val tabRoutes = listOf("main", "flash", "backups", "settings")
                     val isTabRoute = currentRoute in tabRoutes
 
                     val dpiScale = mainViewModel.dpiScale
@@ -635,6 +638,26 @@ class MainActivity : ComponentActivity() {
                                 RebootContent(rebootViewModel, navController)
                             }
                         }
+                        composable("settings/autobackup") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                AutoBackupSettingsContent(mainViewModel, navController)
+                            }
+                        }
+                        composable("settings/language") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                LanguageSettingsContent(mainViewModel, navController)
+                            }
+                        }
+                        composable("settings/logs") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                LogSettingsContent(mainViewModel, navController)
+                            }
+                        }
+                        composable("settings/advanced") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                AdvancedSettingsContent(mainViewModel, navController)
+                            }
+                        }
                         composable("history") {
                             RefreshableScreen(mainViewModel, navController) {
                                 HistoryContent(historyViewModel, navController)
@@ -666,6 +689,12 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(stringResource(R.string.tab_flash)) }
                                     )
                                     NavigationBarItem(
+                                        selected = currentRoute == "backups",
+                                        onClick = { navController.navigate("backups") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
+                                        icon = { Icon(Icons.Filled.List, contentDescription = null) },
+                                        label = { Text(stringResource(R.string.backups)) }
+                                    )
+                                    NavigationBarItem(
                                         selected = currentRoute == "settings",
                                         onClick = { navController.navigate("settings") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
                                         icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
@@ -685,40 +714,27 @@ class MainActivity : ComponentActivity() {
                         onConfirm = { rebootViewModel.executeReboot() },
                         onDismiss = { rebootViewModel.hideConfirm() }
                     )
+
+                    LaunchedEffect(mainViewModel.isDownloading) {
+                        if (mainViewModel.isDownloading && mainViewModel.updateDownloadUrl.isNotEmpty()) {
+                            val progress = mutableStateOf(0f)
+                            AppUpdater.downloadWithProgress(
+                                context,
+                                mainViewModel.updateDownloadUrl,
+                                mainViewModel.updateVersion,
+                                progress
+                            ) { file ->
+                                mainViewModel.finishDownload()
+                                AppUpdater.installApk(context, file)
+                            }
+                            while (mainViewModel.isDownloading) {
+                                mainViewModel.updateDownloadProgress(progress.value)
+                                kotlinx.coroutines.delay(100)
+                            }
+                        }
+                    }
                 } else {
                     ErrorScreen(mainViewModel.error)
-                }
-
-                if (dialogData != null) {
-                    AlertDialog(
-                        onDismissRequest = { viewModel!!.hideUpdateDialog() },
-                        title = {
-                            Text(
-                                dialogData.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        text = {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                dialogData.changelog.forEach {
-                                    Text(it, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            DialogButton("Update APK") {
-                                viewModel!!.hideUpdateDialog()
-                                dialogData.onConfirm()
-                            }
-                        },
-                        dismissButton = {
-                            DialogButton("CANCEL") {
-                                viewModel!!.hideUpdateDialog()
-                            }
-                        },
-                        modifier = Modifier.padding(16.dp)
-                    )
                 }
 
                 if (showExitDialog) {

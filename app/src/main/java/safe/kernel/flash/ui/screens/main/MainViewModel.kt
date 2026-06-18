@@ -83,25 +83,27 @@ class MainViewModel(
         dpiScale = scale.coerceIn(0.5f, 1.5f)
     }
 
+    // Update state
+    var updateAvailable by mutableStateOf(false)
+    var updateVersion by mutableStateOf("")
+    var updateBody by mutableStateOf("")
+    var updateDownloadUrl by mutableStateOf("")
+    var isDownloading by mutableStateOf(false)
+    var downloadProgress by mutableFloatStateOf(0f)
+
+    fun setUpdateInfo(version: String, body: String, url: String) {
+        updateVersion = version
+        updateBody = body
+        updateDownloadUrl = url
+        updateAvailable = true
+    }
+
+    fun startDownload() { isDownloading = true; downloadProgress = 0f }
+    fun updateDownloadProgress(p: Float) { downloadProgress = p }
+    fun finishDownload() { isDownloading = false; updateAvailable = false }
+
     fun markRefreshNeeded() {
         _isRefreshRequired.value = true
-    }
-
-    data class UpdateDialogData(
-        val title: String,
-        val changelog: List<String>,
-        val onConfirm: () -> Unit
-    )
-
-    var updateDialogData by mutableStateOf<UpdateDialogData?>(null)
-        private set
-
-    fun showUpdateDialog(title: String, changelog: List<String>, onConfirm: () -> Unit) {
-        updateDialogData = UpdateDialogData(title, changelog, onConfirm)
-    }
-
-    fun hideUpdateDialog() {
-        updateDialogData = null
     }
 
     init {

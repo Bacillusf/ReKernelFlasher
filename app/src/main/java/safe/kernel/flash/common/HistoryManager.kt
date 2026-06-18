@@ -35,7 +35,7 @@ object HistoryManager {
 
     @SuppressLint("SdCardPath")
     private fun getHistoryFile() =
-        fileSystemManager?.getFile("/sdcard/KernelFlasher/$HISTORY_FILE")
+        fileSystemManager?.getFile("/sdcard/ReKernelFlasher/$HISTORY_FILE")
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun load() {

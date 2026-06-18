@@ -553,10 +553,10 @@ class SlotViewModel(
 
     private fun createBackupDir(context: Context, now: String): ExtendedFile {
         @SuppressLint("SdCardPath")
-        val externalDir = fileSystemManager.getFile("/sdcard/KernelFlasher")
+        val externalDir = fileSystemManager.getFile("/sdcard/ReKernelFlasher")
         if (!externalDir.exists()) {
             if (!externalDir.mkdir()) {
-                log(context, "Failed to create KernelFlasher dir on /sdcard", shouldThrow = true)
+                log(context, "Failed to create ReKernelFlasher dir on /sdcard", shouldThrow = true)
             }
         }
         val backupsDir = externalDir.getChildFile("backups")
@@ -600,7 +600,7 @@ class SlotViewModel(
             _backups[now] = backup
             addMessage("Backup $now saved")
             _wasFlashSuccess.value = true
-            HistoryManager.record(HistoryEntry.create("备份分区 -> /sdcard/KernelFlasher/backups/$now"))
+            HistoryManager.record(HistoryEntry.create("备份分区 -> /sdcard/ReKernelFlasher/backups/$now"))
             SharedViewModels.mainViewModel.markRefreshNeeded()
         }
     }
@@ -669,7 +669,7 @@ class SlotViewModel(
         flashUri = null
         flashFilename = filename
         @SuppressLint("SdCardPath")
-        val externalDir = File("/sdcard/KernelFlasher")
+        val externalDir = File("/sdcard/ReKernelFlasher")
         val backupsDir = fileSystemManager.getFile("$externalDir/backups")
         val backupDir = backupsDir.getChildFile(currentBackup)
         if (!backupDir.exists()) {

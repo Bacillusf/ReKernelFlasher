@@ -88,6 +88,12 @@
     <string name="language">语言</string>
     <string name="language_zh">简体中文</string>
     <string name="language_en">English</string>
+    <string name="auto_backup_settings">自动备份设置</string>
+    <string name="language_settings">语言设置</string>
+    <string name="log_settings">日志保存设置</string>
+    <string name="advanced_settings">高级设置</string>
+    <string name="storage_permission">存储权限</string>
+    <string name="grant_storage_permission">前往设置授权</string>
     <string name="manage">管理</string>
     <string name="diagnostics">诊断</string>
     <!-- TODO: Make error and success messages string resources -->
