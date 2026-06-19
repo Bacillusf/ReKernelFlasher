@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
@@ -30,9 +33,11 @@ import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.DataRow
 import safe.kernel.flash.ui.components.DataSet
+import safe.kernel.flash.ui.components.ListItem
+import safe.kernel.flash.ui.components.ListItemIconColors
 import safe.kernel.flash.ui.components.ViewButton
 
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColumnScope.BackupsContent(
     viewModel: BackupsViewModel,
@@ -52,7 +57,7 @@ fun ColumnScope.BackupsContent(
             val cardWidth = remember { mutableIntStateOf(0) }
             val backupId = viewModel.currentBackup!!
             val currentBackup = viewModel.backups[backupId]
-            if(currentBackup == null) return@DataCard
+            if (currentBackup == null) return@DataCard
             DataRow(stringResource(R.string.backup_type), currentBackup.type, mutableMaxWidth = cardWidth)
             DataRow(stringResource(R.string.kernel_version), currentBackup.kernelVersion, mutableMaxWidth = cardWidth, clickable = true)
             if (currentBackup.type == "raw") {
@@ -82,21 +87,22 @@ fun ColumnScope.BackupsContent(
                 }
             }
         }
+        Spacer(Modifier.height(10.dp))
         AnimatedVisibility(!viewModel.isRefreshing) {
-            Column {
-                Spacer(Modifier.height(5.dp))
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = { showDeleteConfirm.value = true }
-                ) {
-                    Text(stringResource(R.string.delete))
-                }
-            }
+            ListItem(
+                title = stringResource(R.string.delete),
+                subtitle = "永久删除此备份",
+                leadingIcon = Icons.Filled.Delete,
+                leadingColors = ListItemIconColors(
+                    container = MaterialTheme.colorScheme.errorContainer,
+                    content = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                onClick = { showDeleteConfirm.value = true }
+            )
         }
         AnimatedConfirmDialog(
             visible = showDeleteConfirm.value,
-            title = "CAUTION!",
+            title = "警告",
             message = "确定要删除此备份吗？",
             detail = viewModel.currentBackup,
             confirmText = stringResource(R.string.delete),
@@ -105,35 +111,35 @@ fun ColumnScope.BackupsContent(
                 showDeleteConfirm.value = false
                 viewModel.delete(context) { navController.popBackStack() }
             },
-            onDismiss = { showDeleteConfirm.value = false }
+            onDismiss = { showDeleteConfirm.value = false },
+            destructive = true
         )
     } else {
         DataCard(stringResource(R.string.backups))
         AnimatedVisibility(viewModel.needsMigration) {
-            Column {
-                Spacer(Modifier.height(5.dp))
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(4.dp),
-                    onClick = { viewModel.migrate(context) }
-                ) {
-                    Text(stringResource(R.string.migrate))
-                }
-            }
+            Spacer(Modifier.height(10.dp))
+            ListItem(
+                title = stringResource(R.string.migrate),
+                subtitle = "迁移旧版本备份数据",
+                leadingIcon = Icons.Filled.Sync,
+                leadingColors = ListItemIconColors(
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                    content = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                onClick = { viewModel.migrate(context) }
+            )
         }
         if (viewModel.backups.isNotEmpty()) {
             for (id in viewModel.backups.keys.sortedByDescending { it }) {
                 val currentBackup = viewModel.backups[id]!!
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
                 DataCard(
                     title = id,
                     button = {
                         AnimatedVisibility(!viewModel.isRefreshing) {
-                            Column {
-                                ViewButton(onClick = {
-                                    navController.navigate("backups/$id")
-                                })
-                            }
+                            ViewButton(onClick = {
+                                navController.navigate("backups/$id")
+                            })
                         }
                     }
                 ) {
@@ -152,12 +158,13 @@ fun ColumnScope.BackupsContent(
                 }
             }
         } else {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
             Text(
                 stringResource(R.string.no_backups_found),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                fontStyle = FontStyle.Italic
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

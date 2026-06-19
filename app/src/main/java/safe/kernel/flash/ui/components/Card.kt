@@ -12,32 +12,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import safe.kernel.flash.ui.theme.softShadow
 
-// TODO: Remove when card is supported in material3: https://m3.material.io/components/cards/implementation/android
 @Composable
 fun Card(
-    shape: Shape = RoundedCornerShape(4.dp),
-    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(20.dp),
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     border: BorderStroke? = null,
-    tonalElevation: Dp = 2.dp,
-    shadowElevation: Dp = 1.dp,
+    shadow: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val shadowMod = if (shadow) modifier.softShadow() else modifier
     Surface(
+        modifier = shadowMod,
         shape = shape,
         color = backgroundColor,
         contentColor = contentColor,
-        tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         border = border
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp, (13.788).dp, 18.dp, 18.dp),
+                .padding(20.dp, 18.dp, 20.dp, 20.dp),
             content = content
         )
     }

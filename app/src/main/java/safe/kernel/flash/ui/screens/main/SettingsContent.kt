@@ -1,40 +1,71 @@
 package safe.kernel.flash.ui.screens.main
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import safe.kernel.flash.R
+import safe.kernel.flash.ui.components.ListItem
+import safe.kernel.flash.ui.components.ListItemIconColors
 import kotlinx.serialization.ExperimentalSerializationApi
 
-@ExperimentalMaterial3Api
-@ExperimentalSerializationApi
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSerializationApi::class)
 @Composable
-fun SettingsContent(
+fun ColumnScope.SettingsContent(
     viewModel: MainViewModel,
     navController: NavController
 ) {
-    OutlinedButton(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp),
-        onClick = { navController.navigate("settings/autobackup") }
-    ) { Text(stringResource(R.string.auto_backup_settings)) }
-    Spacer(Modifier.height(8.dp))
-    OutlinedButton(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp),
-        onClick = { navController.navigate("settings/language") }
-    ) { Text(stringResource(R.string.language_settings)) }
-    Spacer(Modifier.height(8.dp))
-    OutlinedButton(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp),
-        onClick = { navController.navigate("settings/logs") }
-    ) { Text(stringResource(R.string.log_settings)) }
-    Spacer(Modifier.height(8.dp))
-    OutlinedButton(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(4.dp),
-        onClick = { navController.navigate("settings/advanced") }
-    ) { Text(stringResource(R.string.advanced_settings)) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        ListItem(
+            title = stringResource(R.string.auto_backup_settings),
+            subtitle = "刷写前自动备份目标分区",
+            leadingIcon = Icons.Filled.Backup,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            onClick = { navController.navigate("settings/autobackup") }
+        )
+        ListItem(
+            title = stringResource(R.string.language_settings),
+            subtitle = "选择应用显示语言",
+            leadingIcon = Icons.Filled.Language,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.tertiaryContainer,
+                content = MaterialTheme.colorScheme.onTertiaryContainer
+            ),
+            onClick = { navController.navigate("settings/language") }
+        )
+        ListItem(
+            title = stringResource(R.string.log_settings),
+            subtitle = "保存内核日志 (ramoops / dmesg / logcat)",
+            leadingIcon = Icons.Filled.Description,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer
+            ),
+            onClick = { navController.navigate("settings/logs") }
+        )
+        ListItem(
+            title = stringResource(R.string.advanced_settings),
+            subtitle = "界面缩放等高级选项",
+            leadingIcon = Icons.Filled.Code,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.surfaceVariant,
+                content = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            onClick = { navController.navigate("settings/advanced") }
+        )
+    }
 }

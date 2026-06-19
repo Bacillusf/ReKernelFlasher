@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -29,17 +30,20 @@ fun DataCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                modifier = Modifier.padding(0.dp, 9.dp, 8.dp, 9.dp).weight(1.0f),
+                modifier = Modifier
+                    .padding(0.dp, 4.dp, 8.dp, 4.dp)
+                    .weight(1f),
                 text = title,
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleLarge
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
             )
             if (button != null) {
                 button()
             }
         }
         if (content != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
             content()
         }
     }

@@ -14,8 +14,8 @@ android {
         applicationId = "safe.kernel.flash"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10800
-        versionName = "1.8"
+        versionCode = 10900
+        versionName = "1.9"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -94,6 +94,7 @@ android {
         implementation(libs.androidx.activity.compose)
         implementation(libs.androidx.appcompat)
         implementation(libs.androidx.compose.material)
+        implementation(libs.androidx.compose.material.icons.extended)
         implementation(libs.androidx.compose.material3)
         implementation(libs.androidx.compose.foundation)
         implementation(libs.androidx.compose.ui)

@@ -101,6 +101,32 @@ GPL v3.0 License
 
 ## 变更记录
 
+### v1.9 (10900) — 现代 UI 全面重构
+
+#### 视觉与交互
+- **全新设计语言**：启用 `MiuixThemeProvider` 主题，统一圆角规范 8 / 12 / 16 / 20 / 28 dp，定制 Typography 排版
+- **液态玻璃效果**：新增 `liquidGlass` Modifier（API 31+ 用 `RenderEffect` 真模糊，30- 半透明 + 细描边降级），应用于底部导航栏
+- **胶囊悬浮导航栏**：底部导航从平铺 `NavigationBar` 改为悬浮胶囊（36dp 圆角 + 玻璃背景 + 圆形选中指示器动画）
+- **iOS 风格列表项** `ListItem`：圆形 icon 容器 + 标题 + 副标题 + 软阴影，替代纯 OutlinedButton 堆叠
+- **玻璃风格对话框** `AnimatedConfirmDialog`：24dp 圆角 + 12dp 软阴影 + 警告图标 + 强调色按钮（destructive 操作使用 error 配色）
+- **首页状态卡**：从扁平绿卡改为大圆角渐变 Hero（蓝→绿）+ 圆形 Check 图标 + 三行信息
+- **按钮系统升级**：所有 OutlinedButton 4dp 替换为 FilledTonalButton 18dp 圆角，部分主按钮带前缀图标
+- **卡片圆角**：从 4-8dp 统一到 16-20dp，弃用 tonalElevation 改用自定义 `softShadow` Modifier（更柔和的方向性阴影）
+
+#### 重构
+- 移除分散的 `MiuixStatusCard` / `MiuixStatCard` 私有组件，主题化统一
+- 软阴影从 `Card.shadowElevation` 迁移到专用 `softShadow` Modifier（可独立控制 alpha / offsetY）
+- 状态栏 / 导航栏颜色全透明，根据主题自动取色图标
+- 退出对话框、槽位选择对话框改用新玻璃 Dialog
+- 备份分区选择从「Checkbox+Text 偏移」改为自定义 `PartitionCheckRow`（更清晰的选中视觉）
+
+#### 依赖
+- 新增 `androidx.compose.material:material-icons-extended:1.6.0`（用于 Backup / Restore / Storage / History / PowerSettingsNew 等扩展图标）
+
+---
+
+### v1.8 (10800) — 中文化 & 安全增强（基于原版 KernelFlasher 1.6.0）
+
 ### 新增功能（基于原版 KernelFlasher 1.6.0）
 - **UI 重构**：底部三栏导航（首页/刷写/设置）
 - **DPI 缩放**：设置中可调整界面缩放

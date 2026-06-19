@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
@@ -37,15 +36,12 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -77,6 +73,8 @@ import androidx.navigation.compose.rememberNavController
 import safe.kernel.flash.common.LanguageManager
 import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.DialogButton
+import safe.kernel.flash.ui.components.GlassNavigationBar
+import safe.kernel.flash.ui.components.NavItem
 import safe.kernel.flash.ui.screens.RefreshableScreen
 import safe.kernel.flash.ui.screens.autobackup.AutoBackupContent
 import safe.kernel.flash.ui.screens.autobackup.AutoBackupViewModel
@@ -675,32 +673,22 @@ class MainActivity : ComponentActivity() {
                     }
                             }
                             if (isTabRoute) {
-                                NavigationBar {
-                                    NavigationBarItem(
-                                        selected = currentRoute == "main",
-                                        onClick = { navController.navigate("main") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
-                                        icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                                        label = { Text(stringResource(R.string.tab_home)) }
-                                    )
-                                    NavigationBarItem(
-                                        selected = currentRoute == "flash",
-                                        onClick = { navController.navigate("flash") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
-                                        icon = { Icon(Icons.Filled.Build, contentDescription = null) },
-                                        label = { Text(stringResource(R.string.tab_flash)) }
-                                    )
-                                    NavigationBarItem(
-                                        selected = currentRoute == "backups",
-                                        onClick = { navController.navigate("backups") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
-                                        icon = { Icon(Icons.Filled.List, contentDescription = null) },
-                                        label = { Text(stringResource(R.string.backups)) }
-                                    )
-                                    NavigationBarItem(
-                                        selected = currentRoute == "settings",
-                                        onClick = { navController.navigate("settings") { popUpTo(navController.graph.findStartDestination().id) { saveState = true }; launchSingleTop = true; restoreState = true } },
-                                        icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                                        label = { Text(stringResource(R.string.tab_settings)) }
-                                    )
-                                }
+                                GlassNavigationBar(
+                                    items = listOf(
+                                        NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
+                                        NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
+                                        NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
+                                        NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
+                                    ),
+                                    currentRoute = currentRoute,
+                                    onItemClick = { item ->
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
@@ -738,50 +726,38 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (showExitDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showExitDialog = false },
-                        title = { Text("Exit App") },
-                        text = { Text("Are you sure you want to exit?") },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                (context as? Activity)?.let {
-                                    it.finishAffinity()
-                                    exitProcess(0)
-                                }
-                            }) {
-                                Text("Yes")
+                    AnimatedConfirmDialog(
+                        visible = showExitDialog,
+                        title = "退出应用",
+                        message = "确定要退出吗？",
+                        confirmText = "退出",
+                        cancelText = stringResource(R.string.cancel),
+                        onConfirm = {
+                            (context as? Activity)?.let {
+                                it.finishAffinity()
+                                exitProcess(0)
                             }
                         },
-                        dismissButton = {
-                            TextButton(onClick = { showExitDialog = false }) {
-                                Text("No")
-                            }
-                        }
+                        onDismiss = { showExitDialog = false }
                     )
                 }
 
                 if (viewModel?.showSlotIntentDialog?.value == true) {
-                    AlertDialog(
-                        onDismissRequest = { viewModel?.showSlotIntentDialog?.value = false },
-                        title = { Text("Select Slot to Flash") },
-                        text = { Text("Choose the slot where the zip should be flashed.") },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                viewModel?.slotSuffixForFlash?.value = null
-                                viewModel?.slotSuffixForFlash?.value = if(viewModel?.slotSuffix == "_a") "_b" else "_a"
-                                viewModel?.showSlotIntentDialog?.value = false
-                            }) {
-                                Text("Inactive Slot")
-                            }
+                    AnimatedConfirmDialog(
+                        visible = viewModel?.showSlotIntentDialog?.value == true,
+                        title = "选择刷写槽位",
+                        message = "选择要刷写的槽位",
+                        confirmText = "非活跃槽位",
+                        cancelText = "活跃槽位",
+                        onConfirm = {
+                            viewModel?.slotSuffixForFlash?.value = null
+                            viewModel?.slotSuffixForFlash?.value = if (viewModel?.slotSuffix == "_a") "_b" else "_a"
+                            viewModel?.showSlotIntentDialog?.value = false
                         },
-                        dismissButton = {
-                            TextButton(onClick = {
-                                viewModel?.slotSuffixForFlash?.value = null
-                                viewModel?.slotSuffixForFlash?.value = viewModel?.slotSuffix
-                                viewModel?.showSlotIntentDialog?.value = false
-                            }) {
-                                Text("Active Slot")
-                            }
+                        onDismiss = {
+                            viewModel?.slotSuffixForFlash?.value = null
+                            viewModel?.slotSuffixForFlash?.value = viewModel?.slotSuffix
+                            viewModel?.showSlotIntentDialog?.value = false
                         }
                     )
                 }

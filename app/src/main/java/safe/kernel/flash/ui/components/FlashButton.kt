@@ -6,11 +6,20 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -20,12 +29,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.ExperimentalUnitApi
 import androidx.compose.ui.unit.dp
 import safe.kernel.flash.MainActivity
-import kotlinx.serialization.ExperimentalSerializationApi
 
 @ExperimentalAnimationApi
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
-@ExperimentalSerializationApi
 @ExperimentalUnitApi
 @Composable
 fun FlashButton(
@@ -41,18 +48,31 @@ fun FlashButton(
             mainActivity.isAwaitingResult = false
         }
     }
-    OutlinedButton(
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
+    FilledTonalButton(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.primary
+        ),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
         onClick = {
             mainActivity.isAwaitingResult = true
             launcher.launch("*/*")
         }
     ) {
-        Text(buttonText)
+        Icon(
+            Icons.Filled.FolderOpen,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = buttonText,
+            style = MaterialTheme.typography.titleMedium
+        )
     }
-    result.value?.let {uri ->
+    result.value?.let { uri ->
         if (mainActivity.isAwaitingResult) {
             val contentResolver = mainActivity.contentResolver
             val fileName = contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -66,9 +86,7 @@ fun FlashButton(
 
             if (fileName != null && fileName.endsWith(validExtension, ignoreCase = true)) {
                 callback.invoke(uri)
-            }
-            else {
-                // Invalid file extension, show an error message or handle it
+            } else {
                 Toast.makeText(mainActivity.applicationContext, "Invalid file selected!", Toast.LENGTH_LONG).show()
             }
         }

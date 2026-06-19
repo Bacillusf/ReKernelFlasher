@@ -84,7 +84,7 @@ fun AutoBackupContent(
                         openFile(context, file)
                     }
             ),
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日HH时mm分ss秒")

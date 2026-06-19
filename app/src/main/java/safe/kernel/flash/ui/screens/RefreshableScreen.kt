@@ -3,18 +3,18 @@ package safe.kernel.flash.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,8 +35,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import safe.kernel.flash.R
@@ -61,22 +63,34 @@ fun RefreshableScreen(
         viewModel.refresh(context)
     })
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     if (navController.previousBackStackEntry != null) {
                         AnimatedVisibility(!viewModel.isRefreshing, enter = fadeIn(), exit = fadeOut()) {
                             IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = stringResource(R.string.back),
-                                    tint = MaterialTheme.colorScheme.onSurface)
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     }
                 },
                 actions = actions,
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                )
             )
         }
     ) { paddingValues ->
@@ -88,7 +102,8 @@ fun RefreshableScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp, 0.dp, 16.dp, 16.dp + navigationBars.calculateBottomPadding())
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp + navigationBars.calculateBottomPadding())
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
                 content = content
@@ -98,7 +113,7 @@ fun RefreshableScreen(
                 state = state,
                 modifier = Modifier.align(Alignment.TopCenter),
                 backgroundColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.primary,
                 scale = true
             )
         }

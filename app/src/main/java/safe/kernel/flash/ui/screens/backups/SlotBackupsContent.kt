@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
@@ -112,9 +112,9 @@ fun ColumnScope.SlotBackupsContent(
                     Spacer(Modifier.height(5.dp))
                     if (slotViewModel.isActive) {
                         if (currentBackup.type == "raw") {
-                            OutlinedButton(
+                            FilledTonalButton(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(18.dp),
                                 onClick = {
                                     navController.navigate("slot$slotSuffix/backups/${backupsViewModel.currentBackup!!}/restore")
                                 }
@@ -122,25 +122,25 @@ fun ColumnScope.SlotBackupsContent(
                                 Text(stringResource(R.string.restore))
                             }
                         } else if (currentBackup.type == "ak3") {
-                            OutlinedButton(
+                            FilledTonalButton(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(18.dp),
                                 onClick = { showFlashAk3Confirm.value = true }
                             ) {
                                 Text(stringResource(R.string.flash))
                             }
-                            OutlinedButton(
+                            FilledTonalButton(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(18.dp),
                                 onClick = { showFlashMkbootfsConfirm.value = true }
                             ) {
                                 Text(stringResource(R.string.flash_ak3_zip_mkbootfs))
                             }
                         }
                     }
-                    OutlinedButton(
+                    FilledTonalButton(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(18.dp),
                         onClick = { showDeleteConfirm.value = true }
                     ) {
                         Text(stringResource(R.string.delete))
@@ -226,21 +226,21 @@ fun ColumnScope.SlotBackupsContent(
     } else if (navController.currentDestination!!.route!!.endsWith("/backups/{backupId}/restore")) {
         DataCard (stringResource(R.string.restore))
         Spacer(Modifier.height(5.dp))
-        val disabledColor = ButtonDefaults.buttonColors(
-            Color.Transparent,
-            MaterialTheme.colorScheme.onSurface
+        val disabledColor = ButtonDefaults.filledTonalButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
         val currentBackup = backupsViewModel.backups.getValue(backupsViewModel.currentBackup!!)
         if (currentBackup.hashes != null) {
             for (partitionName in PartitionUtil.PartitionNames) {
                 val hash = currentBackup.hashes[partitionName]
                 if (hash != null) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         modifier = Modifier
                             .fillMaxWidth()
                             .alpha(if (backupsViewModel.backupPartitions[partitionName] == true) 1.0f else 0.5f),
-                        shape = RoundedCornerShape(4.dp),
-                        colors = if (backupsViewModel.backupPartitions[partitionName] == true) ButtonDefaults.outlinedButtonColors() else disabledColor,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = if (backupsViewModel.backupPartitions[partitionName] == true) ButtonDefaults.filledTonalButtonColors() else disabledColor,
                         enabled = backupsViewModel.backupPartitions[partitionName] != null,
                         onClick = {
                             backupsViewModel.backupPartitions[partitionName] = !backupsViewModel.backupPartitions[partitionName]!!
@@ -265,9 +265,9 @@ fun ColumnScope.SlotBackupsContent(
             )
             Spacer(Modifier.height(5.dp))
         }
-        OutlinedButton(
+        FilledTonalButton(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(18.dp),
             onClick = { showRestoreConfirm.value = true },
             enabled = currentBackup.hashes == null || (PartitionUtil.PartitionNames.none {
                 currentBackup.hashes[it] != null && backupsViewModel.backupPartitions[it] == null
@@ -299,9 +299,9 @@ fun ColumnScope.SlotBackupsContent(
             AnimatedVisibility(!backupsViewModel.isRefreshing && backupsViewModel.wasRestored != null) {
                 Column {
                     if (backupsViewModel.wasRestored != false) {
-                        OutlinedButton(
+                        FilledTonalButton(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(18.dp),
                             onClick = { navController.navigate("reboot") }
                         ) {
                             Text(stringResource(R.string.reboot))
