@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import safe.kernel.flash.AppUpdater
 import safe.kernel.flash.BuildConfig
 import safe.kernel.flash.common.AutoBackupManager
 import safe.kernel.flash.common.HistoryManager
@@ -26,6 +27,7 @@ import safe.kernel.flash.ui.screens.updates.UpdatesViewModel
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -46,7 +48,9 @@ class MainViewModel(
 
     val kernelVersion: String
     val androidVersion: String = Build.VERSION.RELEASE
+    val appVersionCode: Int = BuildConfig.VERSION_CODE
     val appVersion: String = BuildConfig.VERSION_NAME
+    val appVersionFull: String = "${BuildConfig.VERSION_CODE}/v${BuildConfig.VERSION_NAME}"
     val halInfo: String
     val susfsVersion: String
     val rootManager: String
@@ -101,6 +105,82 @@ class MainViewModel(
     fun startDownload() { isDownloading = true; downloadProgress = 0f }
     fun updateDownloadProgress(p: Float) { downloadProgress = p }
     fun finishDownload() { isDownloading = false; updateAvailable = false }
+
+    // Settings update check states
+    var settingsUpdateChecking by mutableStateOf(false)
+    var settingsUpdateFound by mutableStateOf(false)
+    var settingsUpdateSameVersion by mutableStateOf(false)
+    var settingsUpdateVersion by mutableStateOf("")
+    var settingsUpdateDownloadUrl by mutableStateOf("")
+    var settingsUpdateDownloading by mutableStateOf(false)
+    var settingsUpdateProgress by mutableFloatStateOf(0f)
+    var settingsUpdateError by mutableStateOf<String?>(null)
+
+    fun checkForSettingsUpdate() {
+        if (settingsUpdateChecking) return
+        settingsUpdateChecking = true
+        settingsUpdateFound = false
+        settingsUpdateSameVersion = false
+        settingsUpdateError = null
+        viewModelScope.launch(Dispatchers.IO) {
+            val hasNet = try { AppUpdater.hasActiveInternetConnection() } catch (_: Exception) { false }
+            if (!hasNet) {
+                withContext(Dispatchers.Main) {
+                    settingsUpdateChecking = false
+                    settingsUpdateError = "网络连接不可用，请检查网络后重试"
+                }
+                return@launch
+            }
+            val info = try { AppUpdater.fetchLatestUpdateInfo() } catch (_: Exception) { null }
+            withContext(Dispatchers.Main) {
+                if (info != null) {
+                    settingsUpdateVersion = info.version
+                    settingsUpdateDownloadUrl = info.downloadUrl
+                    if (info.version == BuildConfig.VERSION_NAME) {
+                        settingsUpdateSameVersion = true
+                    } else {
+                        settingsUpdateFound = true
+                    }
+                }
+                settingsUpdateChecking = false
+            }
+        }
+    }
+
+    fun startSettingsUpdateDownload(context: Context) {
+        if (settingsUpdateDownloading) return
+        settingsUpdateDownloading = true
+        settingsUpdateProgress = 0f
+        settingsUpdateError = null
+        viewModelScope.launch(Dispatchers.IO) {
+            val progress = mutableFloatStateOf(0f)
+            val pollJob = viewModelScope.launch(Dispatchers.Main) {
+                while (settingsUpdateDownloading) {
+                    settingsUpdateProgress = progress.floatValue
+                    delay(100)
+                }
+            }
+            AppUpdater.downloadWithProgress(
+                context,
+                settingsUpdateDownloadUrl,
+                settingsUpdateVersion,
+                progress,
+                onComplete = { file ->
+                    settingsUpdateDownloading = false
+                    settingsUpdateFound = false
+                    settingsUpdateSameVersion = false
+                    AppUpdater.installApk(context, file)
+                },
+                onError = { error ->
+                    settingsUpdateDownloading = false
+                    settingsUpdateError = "下载失败: $error"
+                }
+            )
+            pollJob.cancel()
+        }
+    }
+
+    fun dismissSettingsUpdateError() { settingsUpdateError = null }
 
     fun markRefreshNeeded() {
         _isRefreshRequired.value = true
