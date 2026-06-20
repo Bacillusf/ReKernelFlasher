@@ -93,11 +93,23 @@ object AppUpdater {
         } catch (e: Exception) { null }
     }
 
+    suspend fun fetchLatestUpdateInfo(): UpdateInfo? {
+        return try {
+            val response = api.getLatestRelease()
+            if (response.isSuccessful) {
+                val release = response.body() ?: return null
+                val apk = release.assets.find { it.name.endsWith(".apk") } ?: return null
+                UpdateInfo(release.tagName.removePrefix("v"), release.body, apk.downloadUrl)
+            } else null
+        } catch (e: Exception) { null }
+    }
+
     suspend fun downloadWithProgress(
         context: Context,
         url: String,
         version: String,
         progress: MutableState<Float>,
+        onError: ((String) -> Unit)? = null,
         onComplete: (File) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
@@ -124,7 +136,11 @@ object AppUpdater {
             withContext(Dispatchers.Main) { onComplete(file) }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                if (onError != null) {
+                    onError(e.message ?: "Unknown error")
+                } else {
+                    Toast.makeText(context, "下载失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

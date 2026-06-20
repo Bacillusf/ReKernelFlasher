@@ -178,7 +178,7 @@ private fun HeroStatusCard(viewModel: MainViewModel) {
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "App v${viewModel.appVersion}  ·  Android ${viewModel.androidVersion}",
+                    text = "${viewModel.appVersionFull}  ·  Android ${viewModel.androidVersion}",
                     style = MaterialTheme.typography.bodySmall,
                     color = onGradient.copy(alpha = 0.85f)
                 )

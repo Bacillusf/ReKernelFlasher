@@ -99,6 +99,10 @@ import safe.kernel.flash.ui.screens.updates.UpdatesAddContent
 import safe.kernel.flash.ui.screens.updates.UpdatesChangelogContent
 import safe.kernel.flash.ui.screens.updates.UpdatesContent
 import safe.kernel.flash.ui.screens.updates.UpdatesViewContent
+import safe.kernel.flash.ui.screens.toolbox.PayloadDumperContent
+import safe.kernel.flash.ui.screens.toolbox.PayloadDumperExtractContent
+import safe.kernel.flash.ui.screens.toolbox.ToolboxContent
+import safe.kernel.flash.ui.screens.toolbox.UnpackRecordsContent
 import safe.kernel.flash.ui.theme.KernelFlasherTheme
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
@@ -294,6 +298,7 @@ class MainActivity : ComponentActivity() {
             copyNativeBinary("busybox") // BusyBox v1.36.1.1
             copyAsset("mkbootfs")
             copyAsset("ksuinit")
+            copyAsset("payload-dumper-go")
             copyAsset("flash_ak3.sh")
             copyAsset("flash_ak3_mkbootfs.sh")
         } catch (e: Exception) {
@@ -654,6 +659,27 @@ class MainActivity : ComponentActivity() {
                         composable("settings/advanced") {
                             RefreshableScreen(mainViewModel, navController) {
                                 AdvancedSettingsContent(mainViewModel, navController)
+                            }
+                        }
+                        composable("toolbox") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                ToolboxContent(navController)
+                            }
+                        }
+                        composable("toolbox/payload?uri={uri}") { backStackEntry ->
+                            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+                            RefreshableScreen(mainViewModel, navController) {
+                                PayloadDumperContent(navController, uri)
+                            }
+                        }
+                        composable("toolbox/payload/extract") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                PayloadDumperExtractContent(navController)
+                            }
+                        }
+                        composable("toolbox/unpack_records") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                UnpackRecordsContent(navController)
                             }
                         }
                         composable("history") {
