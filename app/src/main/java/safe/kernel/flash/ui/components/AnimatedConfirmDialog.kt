@@ -1,5 +1,9 @@
 package safe.kernel.flash.ui.components
 
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,9 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -42,6 +48,19 @@ fun AnimatedConfirmDialog(
     destructive: Boolean = false
 ) {
     if (visible) {
+        val context = LocalContext.current
+        LaunchedEffect(Unit) {
+            try {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    val vibratorManager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                    vibratorManager?.defaultVibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 80, 100, 80), -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? Vibrator
+                    vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 80, 100, 80), -1))
+                }
+            } catch (_: Exception) {}
+        }
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(

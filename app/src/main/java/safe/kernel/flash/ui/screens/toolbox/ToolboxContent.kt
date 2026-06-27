@@ -1,10 +1,6 @@
 package safe.kernel.flash.ui.screens.toolbox
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,14 +11,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -30,13 +26,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
 import safe.kernel.flash.ui.components.ListItem
 import safe.kernel.flash.ui.components.ListItemIconColors
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -50,6 +49,15 @@ fun ColumnScope.ToolboxContent(
     val result = remember { mutableStateOf<Uri?>(null) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
         result.value = it
+    }
+
+    // Toggle states read via root
+    var avbDisabled by remember { mutableStateOf(false) }
+    var avbHidden by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        avbDisabled = Shell.cmd("test -f /data/adb/modules/RKF/config/avb_disable && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        avbHidden = Shell.cmd("test -f /data/adb/modules/RKF/config/avb_hide && echo yes || echo no").exec().out.firstOrNull() == "yes"
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -80,7 +88,50 @@ fun ColumnScope.ToolboxContent(
             result.value = null
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
+
+        ListItem(
+            title = "自动禁用 AVB2.0",
+            subtitle = if (avbDisabled) "已启用 - 每次开机自动关闭 AVB 校检" else "已禁用",
+            leadingIcon = Icons.Filled.Build,
+            leadingColors = ListItemIconColors(
+                container = if (avbDisabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                content = if (avbDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            trailingText = if (avbDisabled) "开" else "关",
+            onClick = {
+                val flagFile = "/data/adb/modules/RKF/config/avb_disable"
+                if (avbDisabled) {
+                    Shell.cmd("rm -f $flagFile").exec()
+                } else {
+                    Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
+                }
+                avbDisabled = !avbDisabled
+                Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+            }
+        )
+        ListItem(
+            title = "隐藏 AVB 状态",
+            subtitle = if (avbHidden) "已启用 - 隐藏已关闭 AVB 校检的痕迹" else "已禁用",
+            leadingIcon = Icons.Filled.VisibilityOff,
+            leadingColors = ListItemIconColors(
+                container = if (avbHidden) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                content = if (avbHidden) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            trailingText = if (avbHidden) "开" else "关",
+            onClick = {
+                val flagFile = "/data/adb/modules/RKF/config/avb_hide"
+                if (avbHidden) {
+                    Shell.cmd("rm -f $flagFile").exec()
+                } else {
+                    Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
+                }
+                avbHidden = !avbHidden
+                Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+            }
+        )
+
+        Spacer(Modifier.height(4.dp))
 
         ListItem(
             title = "解包记录",

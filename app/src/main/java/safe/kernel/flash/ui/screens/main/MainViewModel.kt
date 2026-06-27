@@ -61,6 +61,8 @@ class MainViewModel(
     val updates: UpdatesViewModel
     val reboot: RebootViewModel
     val hasRamoops: Boolean
+    val avbVerityStatus: String
+    val avbVerificationStatus: String
 
     private val _isRefreshing: MutableState<Boolean> = mutableStateOf(true)
     private val _isRefreshRequired = mutableStateOf(true)
@@ -233,6 +235,26 @@ class MainViewModel(
         }
 
         hasRamoops = fileSystemManager.getFile("/sys/fs/pstore/console-ramoops-0").exists()
+
+        // Detect AVB status from installed module
+        avbVerityStatus = run {
+            val avbctl = listOf(
+                "/data/adb/modules/RKF/system/bin/avbctl",
+                "/data/adb/modules/autodisableavb/system/bin/avbctl"
+            ).firstOrNull { fileSystemManager.getFile(it).exists() } ?: return@run "不可用"
+
+            val out = Shell.cmd("$avbctl get-verity 2>/dev/null").exec().out.joinToString(" ")
+            if (out.contains("disabled", ignoreCase = true)) "已关闭" else "已开启"
+        }
+        avbVerificationStatus = run {
+            val avbctl = listOf(
+                "/data/adb/modules/RKF/system/bin/avbctl",
+                "/data/adb/modules/autodisableavb/system/bin/avbctl"
+            ).firstOrNull { fileSystemManager.getFile(it).exists() } ?: return@run "不可用"
+
+            val out = Shell.cmd("$avbctl get-verification 2>/dev/null").exec().out.joinToString(" ")
+            if (out.contains("disabled", ignoreCase = true)) "已关闭" else "已开启"
+        }
         _isRefreshing.value = false
         _isRefreshRequired.value = false
     }

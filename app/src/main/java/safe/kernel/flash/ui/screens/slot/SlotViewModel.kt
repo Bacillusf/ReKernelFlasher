@@ -15,6 +15,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import safe.kernel.flash.DaemonService
 import safe.kernel.flash.SharedViewModels
 import safe.kernel.flash.common.AutoBackupManager
 import safe.kernel.flash.common.HistoryManager
@@ -797,39 +798,48 @@ class SlotViewModel(
 	}
 
     fun flashAk3(context: Context, currentBackup: String, filename: String) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             _copyFile(context, currentBackup, filename)
             _flashAk3(context, "")
+            withContext(Dispatchers.Main) { DaemonService.stop(context) }
         }
     }
 
     fun flashAk3(context: Context, uri: Uri) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             _copyFile(context, uri)
             _flashAk3(context, "")
+            withContext(Dispatchers.Main) { DaemonService.stop(context) }
         }
     }
 
     fun flashAk3_mkbootfs(context: Context, currentBackup: String, filename: String) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             _copyFile(context, currentBackup, filename)
             _flashAk3(context, "_mkbootfs")
+            withContext(Dispatchers.Main) { DaemonService.stop(context) }
         }
     }
 
     fun flashAk3_mkbootfs(context: Context, uri: Uri) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             _copyFile(context, uri)
             _flashAk3(context, "_mkbootfs")
+            withContext(Dispatchers.Main) { DaemonService.stop(context) }
         }
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     fun flashKsuDriver(context: Context, uri: Uri) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             addMessage("Copying KernelSU Driver ...")
@@ -941,11 +951,13 @@ class SlotViewModel(
                 }
             }
             SharedViewModels.mainViewModel.markRefreshNeeded()
+            withContext(Dispatchers.Main) { DaemonService.stop(context) }
         }
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     fun flashImage(context: Context, uri: Uri, partitionName: String) {
+        DaemonService.start(context)
         launch {
             _clearFlash()
             addMessage("Copying image ...")
@@ -995,6 +1007,7 @@ class SlotViewModel(
                     }
                 }
                 SharedViewModels.mainViewModel.markRefreshNeeded()
+                withContext(Dispatchers.Main) { DaemonService.stop(context) }
             }
         }
     }

@@ -118,6 +118,8 @@ fun ColumnScope.MainContent(
         if (viewModel.halInfo != "") DataRow("Boot HAL", viewModel.halInfo, mutableMaxWidth = cardWidth)
         if (viewModel.susfsVersion != "v0.0.0" && viewModel.susfsVersion != "Invalid")
             DataRow("SUSFS 版本", viewModel.susfsVersion, mutableMaxWidth = cardWidth)
+        DataRow("AVB Verity", viewModel.avbVerityStatus, mutableMaxWidth = cardWidth)
+        DataRow("AVB Verification", viewModel.avbVerificationStatus, mutableMaxWidth = cardWidth)
     }
 }
 

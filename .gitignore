@@ -12,3 +12,6 @@ captures/
 .cxx/
 *.bak
 *.log
+jq:Zone.Identifier
+model/
+payload-dumper-go

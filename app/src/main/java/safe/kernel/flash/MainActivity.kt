@@ -91,6 +91,7 @@ import safe.kernel.flash.ui.screens.main.AutoBackupSettingsContent
 import safe.kernel.flash.ui.screens.main.LanguageSettingsContent
 import safe.kernel.flash.ui.screens.main.LogSettingsContent
 import safe.kernel.flash.ui.screens.main.AdvancedSettingsContent
+import safe.kernel.flash.ui.screens.wizard.WizardScreen
 import safe.kernel.flash.ui.screens.reboot.RebootContent
 import safe.kernel.flash.ui.screens.reboot.RebootViewModel
 import safe.kernel.flash.ui.screens.slot.SlotContent
@@ -233,9 +234,14 @@ class MainActivity : ComponentActivity() {
             val intent = Intent(this, FilesystemService::class.java)
             RootService.bind(intent, AidlConnection())
         } else {
+            // No root: show wizard to guide user
             setContent {
                 KernelFlasherTheme {
-                    ErrorScreen(stringResource(R.string.root_required))
+                    val navController = rememberNavController()
+                    NavHost(navController, startDestination = "wizard") {
+                        composable("wizard") { WizardScreen(navController) }
+                        composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
+                    }
                 }
             }
         }
@@ -518,9 +524,13 @@ class MainActivity : ComponentActivity() {
 
                     }
                     CompositionLocalProvider(LocalDensity provides scaledDensity) {
+                        val prefs = getSharedPreferences("wizard", 0)
+                        val lastWizardVersion = prefs.getInt("version", 0)
+                        val wizardDone = lastWizardVersion >= BuildConfig.VERSION_CODE
+                        val startDest = if (wizardDone) "main" else "wizard"
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) {
-                                NavHost(navController = navController, startDestination = "main") {
+                                NavHost(navController = navController, startDestination = startDest) {
                                     composable("main") {
                                         val showRebootMenu = remember { mutableStateOf(false) }
                                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
@@ -660,6 +670,9 @@ class MainActivity : ComponentActivity() {
                             RefreshableScreen(mainViewModel, navController) {
                                 AdvancedSettingsContent(mainViewModel, navController)
                             }
+                        }
+                        composable("wizard") {
+                            WizardScreen(navController)
                         }
                         composable("toolbox") {
                             RefreshableScreen(mainViewModel, navController) {
