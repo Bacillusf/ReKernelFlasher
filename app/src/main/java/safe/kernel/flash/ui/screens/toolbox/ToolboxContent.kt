@@ -24,6 +24,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -92,46 +94,67 @@ fun ColumnScope.ToolboxContent(
 
         ListItem(
             title = "自动禁用 AVB2.0",
-            subtitle = if (avbDisabled) "已启用 - 每次开机自动关闭 AVB 校检" else "已禁用",
+            subtitle = if (avbDisabled) "每次开机自动关闭 AVB 校检" else "已禁用",
             leadingIcon = Icons.Filled.Build,
             leadingColors = ListItemIconColors(
                 container = if (avbDisabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 content = if (avbDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            trailingText = if (avbDisabled) "开" else "关",
-            onClick = {
-                val flagFile = "/data/adb/modules/RKF/config/avb_disable"
-                if (avbDisabled) {
-                    Shell.cmd("rm -f $flagFile").exec()
-                } else {
-                    Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
-                }
-                avbDisabled = !avbDisabled
-                Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+            trailingContent = {
+                Switch(
+                    checked = avbDisabled,
+                    onCheckedChange = { checked ->
+                        val flagFile = "/data/adb/modules/RKF/config/avb_disable"
+                        if (checked) {
+                            Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
+                        } else {
+                            Shell.cmd("rm -f $flagFile").exec()
+                        }
+                        avbDisabled = checked
+                        Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                )
             }
         )
         ListItem(
             title = "隐藏 AVB 状态",
-            subtitle = if (avbHidden) "已启用 - 隐藏已关闭 AVB 校检的痕迹" else "已禁用",
+            subtitle = if (avbHidden) "隐藏已关闭 AVB 校检的痕迹" else "已禁用",
             leadingIcon = Icons.Filled.VisibilityOff,
             leadingColors = ListItemIconColors(
                 container = if (avbHidden) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 content = if (avbHidden) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            trailingText = if (avbHidden) "开" else "关",
-            onClick = {
-                val flagFile = "/data/adb/modules/RKF/config/avb_hide"
-                if (avbHidden) {
-                    Shell.cmd("rm -f $flagFile").exec()
-                } else {
-                    Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
-                }
-                avbHidden = !avbHidden
-                Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+            trailingContent = {
+                Switch(
+                    checked = avbHidden,
+                    onCheckedChange = { checked ->
+                        val flagFile = "/data/adb/modules/RKF/config/avb_hide"
+                        if (checked) {
+                            Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
+                        } else {
+                            Shell.cmd("rm -f $flagFile").exec()
+                        }
+                        avbHidden = checked
+                        Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                )
             }
         )
 
         Spacer(Modifier.height(4.dp))
+
+        ListItem(
+            title = "修复 RKP",
+            subtitle = "修复骁龙设备解锁 BL 导致的 TEE/RKP 问题（实验性）",
+            leadingIcon = Icons.Filled.Build,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.errorContainer,
+                content = MaterialTheme.colorScheme.onErrorContainer
+            ),
+            onClick = { navController.navigate("toolbox/rkp_fix") }
+        )
 
         ListItem(
             title = "解包记录",

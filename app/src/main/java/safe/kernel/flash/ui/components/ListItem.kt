@@ -35,13 +35,14 @@ data class ListItemIconColors(
 @Composable
 fun ListItem(
     title: String,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     leadingIcon: ImageVector? = null,
     leadingColors: ListItemIconColors? = null,
     trailingText: String? = null,
     trailingIcon: ImageVector? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
 ) {
     val alpha = if (enabled) 1f else 0.4f
@@ -55,7 +56,7 @@ fun ListItem(
             .fillMaxWidth()
             .softShadow(cornerRadius = 18.dp, alpha = 0.06f, offsetY = 2.dp)
             .background(containerColor, RoundedCornerShape(18.dp))
-            .clickable(enabled = enabled) { onClick() }
+            .let { if (trailingContent == null) it.clickable(enabled = enabled) { onClick() } else it }
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -118,6 +119,10 @@ fun ListItem(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
+        }
+        if (trailingContent != null) {
+            Spacer(Modifier.width(4.dp))
+            trailingContent()
         }
     }
 }
