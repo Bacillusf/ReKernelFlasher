@@ -1,23 +1,33 @@
 package safe.kernel.flash.ui.screens.wizard
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -69,11 +82,21 @@ fun WizardScreen(navController: NavController) {
         when (step) {
             1 -> WizardStep1(onNext = { step = 2 })
             2 -> WizardStep2(context, onNext = { step = 3 })
-            3 -> WizardStep3(context, onNext = { step = 4 })
+            3 -> WizardStep3(
+                context,
+                onNext = { step = 4 },
+                onSkip = {
+                    context.getSharedPreferences("wizard", 0)
+                        .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
+                    navController.navigate("main") {
+                        popUpTo("wizard") { inclusive = true }
+                    }
+                }
+            )
             4 -> WizardStep4(
                 onStart = {
                     context.getSharedPreferences("wizard", 0)
-                        .edit().putInt("version", BuildConfig.VERSION_CODE).apply()
+                        .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
                     navController.navigate("main") {
                         popUpTo("wizard") { inclusive = true }
                     }
@@ -172,7 +195,7 @@ private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
                 checking = true
                 val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
                 val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
-                val isMagisk = Shell.cmd("test -f /data/adb/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
                 checking = false
                 rootType = when {
                     isKsu -> "KernelSU"
@@ -231,7 +254,11 @@ private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
 }
 
 @Composable
-private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
+private fun WizardStep3(
+    context: android.content.Context,
+    onNext: () -> Unit,
+    onSkip: () -> Unit
+) {
     val isDark = isSystemInDarkTheme()
     val textColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
     val subColor = if (isDark) Color(0xFFBBBBBB) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -240,6 +267,21 @@ private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
     var flashError by remember { mutableStateOf<String?>(null) }
     var triggerFlash by remember { mutableIntStateOf(0) }
     val logLines = remember { mutableStateListOf<String>() }
+    var selectedMeta by remember { mutableStateOf<String?>(null) }
+    var detectedRoot by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        detectedRoot = when {
+            isKsu -> "KernelSU"
+            isApatch -> "APatch"
+            isMagisk -> "Magisk"
+            else -> null
+        }
+    }
+    val showMetaOptions = detectedRoot != null && detectedRoot != "Magisk"
 
     LaunchedEffect(triggerFlash) {
         if (triggerFlash == 0) return@LaunchedEffect
@@ -249,50 +291,80 @@ private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
         try {
             fun log(msg: String) { logLines.add(msg) }
 
-            log("→ 正在复制模块文件...")
-            val tmpFile = File(context.filesDir, "RKF.zip")
-            context.assets.open("RKF.zip").use { input ->
-                tmpFile.outputStream().use { output -> input.copyTo(output) }
-            }
-
             log("→ 检测 Root 管理器...")
             val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
             val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
-            val isMagisk = Shell.cmd("test -f /data/adb/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+            val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
 
-            val installCmd = when {
-                isKsu -> "/data/adb/ksud module install $tmpFile"
-                isApatch -> "/data/adb/apd module install $tmpFile"
-                isMagisk -> "/data/adb/magisk --install-module $tmpFile"
+            fun installCmd(file: File): String? = when {
+                isKsu -> "/data/adb/ksud module install $file"
+                isApatch -> "/data/adb/apd module install $file"
+                isMagisk -> "/data/adb/magisk/magisk --install-module $file"
                 else -> null
             }
-            if (installCmd == null) {
+
+            val rootManager = when { isKsu -> "KernelSU"; isApatch -> "APatch"; isMagisk -> "Magisk"; else -> null }
+            if (rootManager == null) {
                 flashError = "无法识别 Root 管理器"
                 flashing = false
                 return@LaunchedEffect
             }
 
-            val rootManager = when { isKsu -> "KernelSU"; isApatch -> "APatch"; else -> "Magisk" }
-            log("→ 通过 $rootManager 安装模块...")
-            val result = Shell.cmd(installCmd).exec()
+            // 1. 后端模块优先刷写
+            log("→ 正在复制后端模块文件...")
+            val tmpFile = File(context.filesDir, "RKF.zip")
+            context.assets.open("RKF.zip").use { input ->
+                tmpFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            log("→ 通过 $rootManager 安装后端模块...")
+            val cmd = installCmd(tmpFile)!!
+            val result = Shell.cmd(cmd).exec()
             result.out.forEach { log("  $it") }
             result.err.forEach { log("  ! $it") }
 
             if (!result.isSuccess) {
-                flashError = "安装失败"
+                tmpFile.delete()
+                flashError = "后端模块安装失败"
                 flashing = false
                 return@LaunchedEffect
             }
-
             tmpFile.delete()
             log("→ 确保配置文件...")
             Shell.cmd("mkdir -p /data/adb/modules/RKF/config").exec()
             Shell.cmd("touch /data/adb/modules/RKF/config/avb_disable").exec()
             Shell.cmd("touch /data/adb/modules/RKF/config/avb_hide").exec()
+            log("  ✓ 后端模块安装完成")
+
+            // 2. 根据选择刷写 META 模块
+            val metaAsset = when (selectedMeta) {
+                "magic_mount" -> "model/magic_mount_rs.zip" to "MagicMountRS"
+                "overlayfs" -> "model/overlayfs.zip" to "Meta-OverlayFS"
+                else -> null
+            }
+            if (metaAsset != null) {
+                val (asset, name) = metaAsset
+                log("→ 正在复制 META 模块 ($name)...")
+                val metaFile = File(context.filesDir, "meta.zip")
+                context.assets.open(asset).use { input ->
+                    metaFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                log("→ 通过 $rootManager 安装 META 模块 ($name)...")
+                val metaResult = Shell.cmd(installCmd(metaFile)!!).exec()
+                metaResult.out.forEach { log("  $it") }
+                metaResult.err.forEach { log("  ! $it") }
+                metaFile.delete()
+                if (!metaResult.isSuccess) {
+                    log("  ! META 模块安装失败，忽略继续")
+                } else {
+                    log("  ✓ META 模块 ($name) 安装完成")
+                }
+            } else {
+                log("→ 未选择 META 模块，跳过")
+            }
 
             log("→ 刷新管理器...")
             Shell.cmd("killall magiskd 2>/dev/null; killall ksud 2>/dev/null; killall apd 2>/dev/null").exec()
-            log("  ✓ 模块安装完成")
+            log("  ✓ 全部完成")
 
             flashDone = true
         } catch (e: Exception) {
@@ -339,7 +411,49 @@ private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
         }
     }
 
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(12.dp))
+
+    if (showMetaOptions) {
+        Text(
+            "可选安装 META",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = textColor
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "按需选择附加模块，可不选；选中一项后另一项禁用，再次点击取消",
+            style = MaterialTheme.typography.bodySmall,
+            color = subColor
+        )
+        Spacer(Modifier.height(8.dp))
+
+        MetaOptionCard(
+            iconVector = Icons.Filled.Storage,
+            name = "MagicMountRS",
+            subtitle = "Magic Mount 重定向方案",
+            selected = selectedMeta == "magic_mount",
+            disabled = selectedMeta != null && selectedMeta != "magic_mount",
+            enabled = !flashing && !flashDone,
+            onClick = {
+                selectedMeta = if (selectedMeta == "magic_mount") null else "magic_mount"
+            }
+        )
+        Spacer(Modifier.height(8.dp))
+        MetaOptionCard(
+            iconVector = Icons.Filled.Layers,
+            name = "Meta-OverlayFS",
+            subtitle = "OverlayFS 挂载方案",
+            selected = selectedMeta == "overlayfs",
+            disabled = selectedMeta != null && selectedMeta != "overlayfs",
+            enabled = !flashing && !flashDone,
+            onClick = {
+                selectedMeta = if (selectedMeta == "overlayfs") null else "overlayfs"
+            }
+        )
+
+        Spacer(Modifier.height(12.dp))
+    }
 
     if (flashDone) {
         Card(
@@ -362,12 +476,23 @@ private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
             contentPadding = PaddingValues(vertical = 14.dp)
         ) { Text("下一步", style = MaterialTheme.typography.titleMedium) }
     } else if (!flashing) {
-        Button(
-            onClick = { triggerFlash++ },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) { Text("刷写", style = MaterialTheme.typography.titleMedium) }
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { triggerFlash++ },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(vertical = 14.dp)
+            ) { Text("刷写", style = MaterialTheme.typography.titleMedium) }
+            OutlinedButton(
+                onClick = onSkip,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(vertical = 14.dp)
+            ) { Text("不刷写", style = MaterialTheme.typography.titleMedium) }
+        }
     }
 
     if (flashing || logLines.isNotEmpty()) {
@@ -399,6 +524,76 @@ private fun WizardStep3(context: android.content.Context, onNext: () -> Unit) {
 
     if (flashError != null) {
         Text(flashError!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun MetaOptionCard(
+    iconVector: ImageVector,
+    name: String,
+    subtitle: String,
+    selected: Boolean,
+    disabled: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val alpha = if (disabled) 0.4f else 1f
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .softShadow(cornerRadius = 18.dp, alpha = 0.06f, offsetY = 2.dp)
+            .border(2.dp, borderColor, RoundedCornerShape(18.dp))
+            .background(containerColor.copy(alpha = alpha), RoundedCornerShape(18.dp))
+            .let { if (!disabled && enabled) it.clickable { onClick() } else it }
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = iconVector,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.onPrimary
+                       else MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
+            )
+        }
+        if (selected) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 

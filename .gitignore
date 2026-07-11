@@ -14,4 +14,5 @@ captures/
 *.log
 jq:Zone.Identifier
 model/
+!app/src/main/assets/model/
 payload-dumper-go

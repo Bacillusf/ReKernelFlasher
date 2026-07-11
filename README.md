@@ -101,6 +101,32 @@ GPL v3.0 License
 
 ## 变更记录
 
+### v2.4 (20400) — Magisk 识别修复 · RKP Gen5 · 向导取消 · Meta 模块
+
+#### 修复
+- **修复 Magisk 无法识别 Root** ([#1](https://github.com/Bacillusf/ReKernelFlasher/issues/1))：原代码 `test -d /data/adb/magisk` 检测的是目录，对目录用 `test -f` 永远为 false，导致 Magisk 设备误判为 Superuser 且模块安装命令失效。改为检测二进制 `/data/adb/magisk/magisk`，并同步修正安装命令为 `/data/adb/magisk/magisk --install-module`。
+- 同步修正首页 `MainViewModel` 与向导 `WizardScreen` 的 Root 检测逻辑，统一使用 `ksud` / `apd` / `magisk` 守护进程二进制特征。
+
+#### 新功能
+- **RKP 修复支持骁龙8 Elite Gen5**：百宝箱「修复RKP」点击开始后新增设备类型选择弹窗
+  - 新增「对于Qcom8EliteGen5[Beta]」选项，移植小米17的 `KmInstallKeybox` 工具
+  - 流程：[1/3] 释放工具到 `/data/local/tmp/` 并赋权 → [2/3] 备份 persist → [3/3] `LD_LIBRARY_PATH=/vendor/lib64/hw /data/local/tmp/KmInstallKeybox Keybox_file Device_ID true true`
+  - 原有「处理器≤8Elite」选项保留
+  - 工具 `KmInstallKeybox` 随 APK 打包分发（assets）
+- **向导刷写后端新增「不刷写」按钮**：安装后端模块步骤可在刷写按钮旁选择「不刷写」直接进入软件
+- **向导新增 META 附加模块安装**：刷写后端模块后可选安装 Meta 模块
+  - **MagicMountRS** — Magic Mount 重定向方案（`model/magic_mount_rs.zip`）
+  - **Meta-OverlayFS** — OverlayFS 挂载方案（`model/meta-overlayfs.zip`，仓库内 `overlayfs.zip`）
+  - 互斥选择：选中一项后另一项禁用，再次点击取消；可不选
+  - 刷写优先级：后端模块（RKF.zip）先刷，成功后再按选择刷 Meta 模块
+  - Magisk 设备不显示 META 选项
+
+#### 改进
+- **设置新增「重新启动向导」入口**：可随时重新执行首次安装引导
+- **向导完成标记改用 `commit()` 同步落盘**：避免异步 `apply()` 极端情况下丢失导致每次启动都走向导
+
+---
+
 ### v1.9 (10900) — 现代 UI 全面重构
 
 #### 视觉与交互

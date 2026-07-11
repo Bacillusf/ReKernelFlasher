@@ -201,14 +201,14 @@ class MainViewModel(
             .recoverCatching { Shell.cmd("ksu_susfs show version").exec().out[0] }
             .getOrDefault("v0.0.0")
         rootManager = runCatching {
-            val ksu = Shell.cmd("test -d /data/adb/ksu && echo KernelSU || echo no").exec().out.firstOrNull() ?: "no"
-            if (ksu == "KernelSU") "KernelSU"
+            val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
+            if (isKsu) "KernelSU"
             else {
-                val ap = Shell.cmd("test -d /data/adb/ap && echo APatch || echo no").exec().out.firstOrNull() ?: "no"
-                if (ap == "APatch") "APatch"
+                val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                if (isApatch) "APatch"
                 else {
-                    val magisk = Shell.cmd("test -d /data/adb/magisk && echo Magisk || echo Superuser").exec().out.firstOrNull() ?: "Superuser"
-                    magisk
+                    val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                    if (isMagisk) "Magisk" else "Superuser"
                 }
             }
         }.getOrDefault("Unknown")
