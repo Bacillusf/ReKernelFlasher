@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -117,17 +116,6 @@ fun ColumnScope.BackupsContent(
         )
     } else {
         DataCard(stringResource(R.string.backups))
-        Spacer(Modifier.height(10.dp))
-        ListItem(
-            title = "全字库备份",
-            subtitle = "自动备份除 userdata / sdc 外的全部分区",
-            leadingIcon = Icons.Filled.Backup,
-            leadingColors = ListItemIconColors(
-                container = MaterialTheme.colorScheme.tertiaryContainer,
-                content = MaterialTheme.colorScheme.onTertiaryContainer
-            ),
-            onClick = { navController.navigate("backups/full") }
-        )
         AnimatedVisibility(viewModel.needsMigration) {
             Spacer(Modifier.height(10.dp))
             ListItem(

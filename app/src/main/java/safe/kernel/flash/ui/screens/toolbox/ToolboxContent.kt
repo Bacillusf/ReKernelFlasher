@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -91,6 +92,17 @@ fun ColumnScope.ToolboxContent(
         }
 
         Spacer(Modifier.height(4.dp))
+
+        ListItem(
+            title = "字库备份",
+            subtitle = "备份全部分区，记录会显示在备份页面",
+            leadingIcon = Icons.Filled.Storage,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.tertiaryContainer,
+                content = MaterialTheme.colorScheme.onTertiaryContainer
+            ),
+            onClick = { navController.navigate("toolbox/full_backup") }
+        )
 
         ListItem(
             title = "自动禁用 AVB2.0",

@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +56,7 @@ fun ColumnScope.FullBackupContent(
     }
 
     if (viewModel.fullBackupOutput.isNotEmpty()) {
-        FlashList("全字库备份日志", viewModel.fullBackupOutput) {
+        FlashList("字库备份日志", viewModel.fullBackupOutput) {
             AnimatedVisibility(!viewModel.isRefreshing && viewModel.fullBackupWasSuccessful != null) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Spacer(Modifier.height(6.dp))
@@ -84,7 +83,7 @@ fun ColumnScope.FullBackupContent(
         return
     }
 
-    DataCard("全自动字库备份") {
+    DataCard("字库备份") {
         val cardWidth = remember { mutableIntStateOf(0) }
         if (summary != null) {
             DataRow("平台", summary.platform, mutableMaxWidth = cardWidth)
@@ -121,7 +120,7 @@ fun ColumnScope.FullBackupContent(
             singleLine = true,
             label = { Text("自定义备份目录") },
             leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null) },
-            supportingText = { Text("默认：/sdcard/ReKernelFlasher/full_backups/时间戳") }
+            supportingText = { Text("默认：/sdcard/ReKernelFlasher/backups/型号字库备份") }
         )
         Spacer(Modifier.height(10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -151,7 +150,7 @@ fun ColumnScope.FullBackupContent(
     AnimatedVisibility(!viewModel.isRefreshing) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ListItem(
-                title = "开始全字库备份",
+                title = "开始字库备份",
                 subtitle = summary?.let { "预计需要 ${formatFullBackupBytes(it.estimatedBytes)} 可用空间，跳过 userdata / sdc" }
                     ?: "先检测平台和分区大小",
                 leadingIcon = Icons.Filled.Storage,
@@ -178,7 +177,7 @@ fun ColumnScope.FullBackupContent(
 
     AnimatedConfirmDialog(
         visible = showStartConfirm.value,
-        title = "开始全字库备份",
+        title = "开始字库备份",
         message = "将备份除 userdata / sdc 外的所有分区，预计占用 ${formatFullBackupBytes(summary?.estimatedBytes ?: 0L)}。",
         detail = viewModel.fullBackupDirectory,
         confirmText = "开始备份",

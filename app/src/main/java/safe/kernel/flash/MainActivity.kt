@@ -608,12 +608,6 @@ class MainActivity : ComponentActivity() {
                                 BackupsContent(backupsViewModel, navController)
                             }
                         }
-                        composable("backups/full") {
-                            backupsViewModel.clearCurrent()
-                            RefreshableScreen(mainViewModel, navController, swipeEnabled = false) {
-                                FullBackupContent(backupsViewModel, navController)
-                            }
-                        }
                         composable("backups/{backupId}") { backStackEntry ->
                             backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                             if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
@@ -696,6 +690,12 @@ class MainActivity : ComponentActivity() {
                         composable("toolbox/payload/extract") {
                             RefreshableScreen(mainViewModel, navController) {
                                 PayloadDumperExtractContent(navController)
+                            }
+                        }
+                        composable("toolbox/full_backup") {
+                            backupsViewModel.clearCurrent()
+                            RefreshableScreen(mainViewModel, navController, swipeEnabled = false) {
+                                FullBackupContent(backupsViewModel, navController)
                             }
                         }
                         composable("toolbox/unpack_records") {

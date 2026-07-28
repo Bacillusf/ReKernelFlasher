@@ -1,6 +1,7 @@
 package safe.kernel.flash.ui.screens.backups
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -289,8 +290,22 @@ class BackupsViewModel(
     }
 
     private fun defaultFullBackupDirectory(): String {
+        val model = sanitizeFileComponent(Build.MODEL.ifBlank { "unknown" })
+        return "/sdcard/ReKernelFlasher/backups/${model}字库备份"
+    }
+
+    private fun sanitizeFileComponent(value: String): String {
+        return value.trim()
+            .replace(Regex("""[\/:*?"<>|]+"""), "-")
+            .replace(Regex("""\s+"""), "-")
+            .trim('-')
+            .ifBlank { "unknown" }
+    }
+    private fun createUniqueDirectory(baseDir: String): String {
+        val base = baseDir.trim().trimEnd('/')
+        if (!fileSystemManager.getFile(base).exists()) return base
         val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd--HH-mm"))
-        return "/sdcard/ReKernelFlasher/full_backups/$now"
+        return "$base-$now"
     }
 
     private fun normalizeFullBackupDirectory(path: String): String {
@@ -400,7 +415,7 @@ class BackupsViewModel(
                 return@launch
             }
             val (platform, sourceDir) = source
-            val outDir = normalizeFullBackupDirectory(fullBackupDirectory)
+            val outDir = createUniqueDirectory(normalizeFullBackupDirectory(fullBackupDirectory))
             fullBackupDirectory = outDir
             fullBackupWasSuccessful = null
             fullBackupSuccessCount = 0L
@@ -434,7 +449,7 @@ class BackupsViewModel(
                 SUCCESS_COUNT=0
                 FAIL_COUNT=0
                 echo "=================================================="
-                echo "  全字库备份脚本"
+                echo "  字库备份脚本"
                 echo "  平台：${d}PLATFORM"
                 echo "  源路径：${d}SRC_DIR"
                 echo "  备份目录：${d}OUT_DIR"
@@ -489,11 +504,35 @@ class BackupsViewModel(
             }
             result.err.forEach { addFullBackupMessage(it) }
             fullBackupWasSuccessful = result.isSuccess && fullBackupFailCount == 0L
-            HistoryManager.record(HistoryEntry.create("全字库备份 -> $outDir，成功 ${fullBackupSuccessCount}，跳过 ${fullBackupSkipCount}，失败 ${fullBackupFailCount}"))
+            if (fullBackupWasSuccessful == true) {
+                writeFullBackupRecord(outDir, platform)
+            }
+            HistoryManager.record(HistoryEntry.create("字库备份 -> $outDir，成功 ${fullBackupSuccessCount}，跳过 ${fullBackupSkipCount}，失败 ${fullBackupFailCount}"))
             if (fullBackupWasSuccessful != true) {
-                log(context, "全字库备份完成，但有 ${fullBackupFailCount} 个失败")
+                log(context, "字库备份完成，但有 ${fullBackupFailCount} 个失败")
             }
         }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun writeFullBackupRecord(outDir: String, platform: String) {
+        val backupDir = fileSystemManager.getFile(outDir)
+        if (!backupDir.exists()) return
+        val backupName = backupDir.name
+        val kernelVersion = Shell.cmd("echo $(uname -r) $(uname -v)").exec().out.firstOrNull()?.trim().orEmpty()
+        val backup = Backup(
+            name = backupName,
+            type = "raw",
+            kernelVersion = kernelVersion.ifBlank { platform },
+            bootSha1 = null,
+            filename = null,
+            hashes = null,
+            hashAlgorithm = hashAlgorithm
+        )
+        val jsonFile = backupDir.getChildFile("backup.json")
+        val indentedJson = Json { prettyPrint = true }
+        jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
+        _backups[backupName] = backup
     }
 
     private fun parseFullBackupResult(line: String) {
