@@ -79,6 +79,7 @@ import safe.kernel.flash.ui.screens.RefreshableScreen
 import safe.kernel.flash.ui.screens.autobackup.AutoBackupContent
 import safe.kernel.flash.ui.screens.autobackup.AutoBackupViewModel
 import safe.kernel.flash.ui.screens.backups.BackupsContent
+import safe.kernel.flash.ui.screens.backups.FullBackupContent
 import safe.kernel.flash.ui.screens.backups.SlotBackupsContent
 import safe.kernel.flash.ui.screens.error.ErrorScreen
 import safe.kernel.flash.ui.screens.history.HistoryContent
@@ -605,6 +606,12 @@ class MainActivity : ComponentActivity() {
                             backupsViewModel.clearCurrent()
                             RefreshableScreen(mainViewModel, navController) {
                                 BackupsContent(backupsViewModel, navController)
+                            }
+                        }
+                        composable("backups/full") {
+                            backupsViewModel.clearCurrent()
+                            RefreshableScreen(mainViewModel, navController, swipeEnabled = false) {
+                                FullBackupContent(backupsViewModel, navController)
                             }
                         }
                         composable("backups/{backupId}") { backStackEntry ->
