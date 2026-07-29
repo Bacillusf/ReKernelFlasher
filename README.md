@@ -1,5 +1,5 @@
 <!-- 右侧悬浮SVG图标，width控制图标大小，align="right"实现文字环绕 -->
-<img align="right" width="130" src="./RI.svg" alt="Kernel Flasher Logo" style="background: #ffffff; padding: 6px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display:block; margin: 0; vertical-align: bottom;">
+<img align="right" width="130" src="./RI.svg" alt="Kernel Flasher Logo" style="display:block; margin: 0; vertical-align: bottom;">
 # Kernel Flasher
 Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复 Android 内核镜像。
 基于 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 二次开发，由 [Bacillusf](https://github.com/Bacillusf) 维护。
