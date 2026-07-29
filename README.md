@@ -5,9 +5,9 @@
 Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复 Android 内核镜像。
 基于 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 二次开发，由 [Bacillusf](https://github.com/Bacillusf) 维护。
 
-[![Github RKF](https://img.shields.io/badge/Github-RKF-#171515?logo=github&style=flat-square)](https://github.com/Bacillusf/ReKernelFlasher)
-[![Release v2.4](https://img.shields.io/badge/Release-v2.4-#ff8800?style=flat-square)](https://github.com/Bacillusf/ReKernelFlasher/releases/tag/v2.4)
-[![License GPLv3.0](https://img.shields.io/badge/License-GPLv3.0-#862d8b?logo=gnu&style=flat-square)](https://www.gnu.org/licenses/quick-guide-gplv3.html)
+[![最新发行](https://img.shields.io/github/v/release/Bacillusf/ReKernelFlasher?label=Release&logo=github)](https://github.com/Bacillusf/ReKernelFlasher/releases/tag/v2.4)
+[![Github RKF](https://img.shields.io/badge/Github-RKF-#171515?logo=github)](https://github.com/Bacillusf/ReKernelFlasher)
+[![协议: GPLv3.0](https://img.shields.io/badge/License-GPLv3.0-orange?logo=gnu)](https://www.gnu.org/licenses/quick-guide-gplv3.html)
 
 
 ---
