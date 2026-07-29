@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
+  <defs>
+    <clipPath id="rounded">
+      <rect width="108" height="108" rx="24" ry="24"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#rounded)">
+    <rect width="108" height="108" fill="#000000"/>
+  <g transform="translate(30,30)">
+    <path fill="#FF9800" d="
+      M18.85 29.15 V18.9 H29.1 V29.15 Z
+      M21.85 26.15 H26.1 V21.9 H21.85 Z
+      M18 42 V38 H13 Q11.8 38 10.9 37.1 Q10 36.2 10 35 V30 H6 V27 H10 V20.8 H6 V17.8 H10 V12.8 Q10 11.6 10.9 10.7 Q11.8 9.8 13 9.8 H18 V6 H21 V9.8 H27.2 V6 H30.2 V9.8 H35.2 Q36.4 9.8 37.3 10.7 Q38.2 11.6 38.2 12.8 V17.8 H42 V20.8 H38.2 V27 H42 V30 H38.2 V35 Q38.2 36.2 37.3 37.1 Q36.4 38 35.2 38 H30.2 V42 H27.2 V38 H21 V42 Z
+      M35.2 35 Q35.2 35 35.2 35 Q35.2 35 35.2 35 V12.8 Q35.2 12.8 35.2 12.8 Q35.2 12.8 35.2 12.8 H13 Q13 12.8 13 12.8 Q13 12.8 13 12.8 V35 Q13 35 13 35 Q13 35 13 35 Z
+      M24 24 Z
+    "/>
+  </g>
+  </g>
+</svg>
