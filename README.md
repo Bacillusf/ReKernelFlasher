@@ -7,6 +7,8 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 <img align="right" width="130" src="./RI.svg" alt="Kernel Flasher Logo" style="display:block; margin: 0; vertical-align: bottom;">
 
 
+
+
 ---
 ## 灵感
 原版KernelFlasher对新手很不友好，没有二次弹窗确认，容易刷错分区，很多新手没有备份意识，刷错了只能无助的等待全量包...而且原仓库已经归档，于是我做了这个分支
