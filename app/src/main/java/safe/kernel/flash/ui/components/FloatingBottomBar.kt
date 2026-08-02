@@ -186,7 +186,7 @@ fun FloatingBottomBar(
     val pillShape = remember { CircleShape }
     val accentColor = MaterialTheme.colorScheme.primary
     val surfaceContainer = MaterialTheme.colorScheme.surfaceVariant
-    val containerColor = if (isBlurEnabled) surfaceContainer.copy(0.4f) else surfaceContainer
+    val containerColor = if (isBlurEnabled) Color.Transparent else surfaceContainer.copy(alpha = 0.18f)
 
     val tabsBackdrop = rememberLayerBackdrop()
     val density = LocalDensity.current
@@ -331,7 +331,7 @@ fun FloatingBottomBar(
                                 scaleX = s
                                 scaleY = s
                             },
-                            onDrawSurface = { drawRect(containerColor) },
+                            onDrawSurface = {},
                         )
                     } else {
                         Modifier.background(containerColor, pillShape)
@@ -367,7 +367,7 @@ fun FloatingBottomBar(
                                     refractionAmount = 24.dp.toPx(),
                                 )
                             },
-                            onDrawSurface = { drawRect(containerColor) },
+                            onDrawSurface = {},
                         )
                         .then(interactiveHighlight.modifier)
                         .height(56.dp)
@@ -411,14 +411,7 @@ fun FloatingBottomBar(
                                 scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
                                 scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
                             },
-                            onDrawSurface = {
-                                val progress = dampedDragAnimation.pressProgress
-                                drawRect(
-                                    color = if (!isInDark) Color.Black.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.1f),
-                                    alpha = 1f - progress,
-                                )
-                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                            },
+                            onDrawSurface = {},
                         )
                         .innerShadow(shape = pillShape) {
                             InnerShadow(

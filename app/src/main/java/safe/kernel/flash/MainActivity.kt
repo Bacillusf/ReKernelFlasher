@@ -708,24 +708,24 @@ class MainActivity : ComponentActivity() {
                             ErrorScreen(error!!)
                         }
                     }
-                            }
-                            if (isTabRoute) {
-                                GlassNavigationBar(
-                                    items = listOf(
-                                        NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
-                                        NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
-                                        NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
-                                        NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
-                                    ),
-                                    currentRoute = currentRoute,
-                                    onItemClick = { item ->
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                if (isTabRoute) {
+                                    GlassNavigationBar(
+                                        items = listOf(
+                                            NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
+                                            NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
+                                            NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
+                                            NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
+                                        ),
+                                        currentRoute = currentRoute,
+                                        onItemClick = { item ->
+                                            navController.navigate(item.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
