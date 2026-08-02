@@ -63,15 +63,7 @@ fun Modifier.softShadow(
     alpha: Float = 0.10f,
     cornerRadius: Dp = 20.dp,
     offsetY: Dp = 6.dp,
-): Modifier = drawBehind {
-    val shadowColor = color.copy(alpha = alpha)
-    drawRoundRect(
-        color = shadowColor,
-        topLeft = Offset(0f, offsetY.toPx()),
-        size = size,
-        cornerRadius = CornerRadius(cornerRadius.toPx(), cornerRadius.toPx())
-    )
-}
+): Modifier = this
 
 fun Modifier.gradientBackground(
     colors: List<Color>,

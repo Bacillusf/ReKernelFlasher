@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
@@ -44,8 +43,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.ui.components.Card
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.DataRow
-import safe.kernel.flash.ui.components.ListItem
-import safe.kernel.flash.ui.components.ListItemIconColors
 import safe.kernel.flash.ui.theme.softShadow
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -92,18 +89,6 @@ fun ColumnScope.MainContent(
             DataRow("SUSFS 版本", viewModel.susfsVersion, mutableMaxWidth = cardWidth)
         }
     }
-    Spacer(Modifier.height(12.dp))
-
-    ListItem(
-        title = "Verified Boot",
-        subtitle = "Verity: ${viewModel.avbVerityStatus}  ·  Verification: ${viewModel.avbVerificationStatus}",
-        leadingIcon = Icons.Filled.Memory,
-        leadingColors = ListItemIconColors(
-            container = MaterialTheme.colorScheme.tertiaryContainer,
-            content = MaterialTheme.colorScheme.onTertiaryContainer,
-        ),
-        enabled = false,
-    )
 }
 
 @OptIn(ExperimentalSerializationApi::class)

@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     namespace = "safe.kernel.flash"
 
     defaultConfig {
@@ -134,4 +134,5 @@ android {
         implementation(libs.kotlinx.serialization.json)
         implementation(libs.retrofit)
         implementation(libs.converter.gson)
+        implementation(libs.miuix.blur)
     }

@@ -25,11 +25,8 @@ fun Card(
     shadow: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val surfaceModifier = modifier
-        .then(if (shadow) Modifier.softShadow(cornerRadius = 20.dp, alpha = 0.06f, offsetY = 3.dp) else Modifier)
-
     Surface(
-        modifier = surfaceModifier,
+        modifier = modifier,
         shape = shape,
         color = backgroundColor,
         contentColor = contentColor,

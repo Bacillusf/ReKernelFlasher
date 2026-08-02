@@ -57,7 +57,6 @@ fun ListItem(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .softShadow(cornerRadius = 18.dp, alpha = 0.045f, offsetY = 2.dp)
             .then(if (trailingContent == null) Modifier.clickable(enabled = enabled) { onClick() } else Modifier),
         shape = shape,
         color = containerColor,

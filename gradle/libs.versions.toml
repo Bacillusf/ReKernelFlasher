@@ -15,6 +15,7 @@ kotlinx-serialization-json = "1.9.0"
 libsu = "6.0.0"
 material = "1.13.0"
 okhttp = "5.3.2"
+miuix = "0.9.2"
 
 android-application = "8.13.2"
 devtools-ksp = "2.3.4"
@@ -44,6 +45,7 @@ libsu-service = { group = "com.github.topjohnwu.libsu", name = "service", versio
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+miuix-blur = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-application" }
