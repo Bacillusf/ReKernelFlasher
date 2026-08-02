@@ -1,7 +1,5 @@
 package safe.kernel.flash
 
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
@@ -14,10 +12,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.provider.DocumentsContract
 import android.util.Log
-import android.view.View
-import android.view.ViewTreeObserver
 import android.view.Window
-import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -60,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.ExperimentalUnitApi
 import androidx.compose.ui.unit.dp
-import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
@@ -194,45 +188,11 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val isZipIntent = intent?.action == Intent.ACTION_VIEW &&
-                (intent.type == "application/zip" || intent.data?.toString()?.endsWith(".zip") == true)
-
         splashScreen.setOnExitAnimationListener { splashScreenView ->
-            val duration = if (isZipIntent) 100L else 250L
-            val scale = ObjectAnimator.ofPropertyValuesHolder(
-                splashScreenView.view,
-                PropertyValuesHolder.ofFloat(
-                    View.SCALE_X,
-                    1f,
-                    0f
-                ),
-                PropertyValuesHolder.ofFloat(
-                    View.SCALE_Y,
-                    1f,
-                    0f
-                )
-            )
-            scale.interpolator = AccelerateInterpolator()
-            scale.duration = duration
-            scale.doOnEnd { splashScreenView.remove() }
-            scale.start()
+            splashScreenView.remove()
         }
 
-        val content: View = findViewById(android.R.id.content)
-        content.viewTreeObserver.addOnPreDrawListener(
-            object : ViewTreeObserver.OnPreDrawListener {
-                override fun onPreDraw(): Boolean {
-                    return if (viewModel?.isRefreshing == false || Shell.isAppGrantedRoot() == false) {
-                        content.viewTreeObserver.removeOnPreDrawListener(this)
-                        true
-                    } else {
-                        false
-                    }
-                }
-            }
-        )
-
-
+        // Do not block the first Compose frame; content renders immediately and refresh state updates in-place.
 
         Shell.getShell()
         if (Shell.isAppGrantedRoot()!!) {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_splash_background">#0E0E0F</color>
+    <color name="window_background">#0E0E0F</color>
+    <color name="splash_icon_base">#9AA0A6</color>
+    <color name="splash_icon_accent">#81C995</color>
+</resources>
