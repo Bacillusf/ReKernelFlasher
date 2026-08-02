@@ -25,25 +25,23 @@ fun DataCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(0.dp),
+                .padding(bottom = if (content == null) 0.dp else 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 modifier = Modifier
-                    .padding(0.dp, 4.dp, 8.dp, 4.dp)
+                    .padding(end = 8.dp)
                     .weight(1f),
                 text = title,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )
-            if (button != null) {
-                button()
-            }
+            button?.invoke()
         }
         if (content != null) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             content()
         }
     }

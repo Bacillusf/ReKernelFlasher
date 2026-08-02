@@ -1,6 +1,5 @@
 package safe.kernel.flash.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -19,13 +18,9 @@ fun ViewButton(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier
-            .size(36.dp)
-            .background(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = CircleShape
-            ),
+        modifier = Modifier.size(36.dp),
         colors = IconButtonDefaults.iconButtonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     ) {

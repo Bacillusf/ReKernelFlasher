@@ -52,10 +52,10 @@ fun FlashButton(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.primary
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 15.dp),
         onClick = {
             mainActivity.isAwaitingResult = true
             launcher.launch("*/*")
