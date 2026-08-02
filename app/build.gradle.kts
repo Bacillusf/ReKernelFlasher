@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.devtools.ksp)
@@ -36,8 +38,24 @@ android {
         }
         }
 
+        val keystorePropertiesFile = rootProject.file("keystore.properties")
+        val keystoreProperties = Properties()
+        if (keystorePropertiesFile.exists()) {
+            keystoreProperties.load(keystorePropertiesFile.inputStream())
+        }
+
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile", "RKF-release-key.jks"))
+                storePassword = keystoreProperties.getProperty("storePassword", "")
+                keyAlias = keystoreProperties.getProperty("keyAlias", "")
+                keyPassword = keystoreProperties.getProperty("keyPassword", "")
+            }
+        }
+
         buildTypes {
             release {
+                signingConfig = signingConfigs.getByName("release")
                 isMinifyEnabled = false
                 isShrinkResources = false
                 proguardFiles(

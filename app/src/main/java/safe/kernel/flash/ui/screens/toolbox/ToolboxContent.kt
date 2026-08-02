@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -166,6 +167,17 @@ fun ColumnScope.ToolboxContent(
                 content = MaterialTheme.colorScheme.onErrorContainer
             ),
             onClick = { navController.navigate("toolbox/rkp_fix") }
+        )
+
+        ListItem(
+            title = "开启高通Diag端口",
+            subtitle = "开启骁龙设备 Diag 调试端口（QPST/QXDM）",
+            leadingIcon = Icons.Filled.Usb,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.errorContainer,
+                content = MaterialTheme.colorScheme.onErrorContainer
+            ),
+            onClick = { navController.navigate("toolbox/diag_port") }
         )
 
         ListItem(

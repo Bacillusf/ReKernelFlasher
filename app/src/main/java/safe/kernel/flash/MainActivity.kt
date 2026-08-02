@@ -105,6 +105,7 @@ import safe.kernel.flash.ui.screens.toolbox.PayloadDumperContent
 import safe.kernel.flash.ui.screens.toolbox.PayloadDumperExtractContent
 import safe.kernel.flash.ui.screens.toolbox.ToolboxContent
 import safe.kernel.flash.ui.screens.toolbox.UnpackRecordsContent
+import safe.kernel.flash.ui.screens.toolbox.DiagPortContent
 import safe.kernel.flash.ui.screens.toolbox.RkpFixContent
 import safe.kernel.flash.ui.theme.KernelFlasherTheme
 import com.topjohnwu.superuser.Shell
@@ -706,6 +707,11 @@ class MainActivity : ComponentActivity() {
                         composable("toolbox/rkp_fix") {
                             RefreshableScreen(mainViewModel, navController) {
                                 RkpFixContent(navController)
+                            }
+                        }
+                        composable("toolbox/diag_port") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                DiagPortContent(navController)
                             }
                         }
                         composable("history") {
