@@ -18,6 +18,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -108,6 +110,9 @@ import safe.kernel.flash.ui.theme.KernelFlasherTheme
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import top.yukonga.miuix.kmp.blur.layerBackdrop
@@ -200,22 +205,57 @@ class MainActivity : ComponentActivity() {
             splashScreenView.remove()
         }
 
-        // Do not block the first Compose frame; content renders immediately and refresh state updates in-place.
+        showStartupPlaceholder()
 
-        Shell.getShell()
-        if (Shell.isAppGrantedRoot()!!) {
-            val intent = Intent(this, FilesystemService::class.java)
-            RootService.bind(intent, AidlConnection())
-        } else {
-            // No root: show wizard to guide user
-            setContent {
-                KernelFlasherTheme {
-                    val navController = rememberNavController()
-                    NavHost(navController, startDestination = "wizard") {
-                        composable("wizard") { WizardScreen(navController) }
-                        composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                Shell.getShell()
+                val rootGranted = Shell.isAppGrantedRoot() == true
+                withContext(Dispatchers.Main) {
+                    if (rootGranted) {
+                        val intent = Intent(this@MainActivity, FilesystemService::class.java)
+                        RootService.bind(intent, AidlConnection())
+                    } else {
+                        showRootRequiredWizard()
                     }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, e.message, e)
+                withContext(Dispatchers.Main) {
+                    showStartupError(e.message ?: getString(R.string.root_required))
+                }
+            }
+        }
+    }
+
+    private fun showStartupPlaceholder() {
+        setContent {
+            KernelFlasherTheme {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                )
+            }
+        }
+    }
+
+    private fun showRootRequiredWizard() {
+        setContent {
+            KernelFlasherTheme {
+                val navController = rememberNavController()
+                NavHost(navController, startDestination = "wizard") {
+                    composable("wizard") { WizardScreen(navController) }
+                    composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
+                }
+            }
+        }
+    }
+
+    private fun showStartupError(message: String) {
+        setContent {
+            KernelFlasherTheme {
+                ErrorScreen(message)
             }
         }
     }
