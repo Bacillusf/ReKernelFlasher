@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
@@ -92,6 +93,7 @@ import safe.kernel.flash.ui.screens.main.AutoBackupSettingsContent
 import safe.kernel.flash.ui.screens.main.LanguageSettingsContent
 import safe.kernel.flash.ui.screens.main.LogSettingsContent
 import safe.kernel.flash.ui.screens.main.AdvancedSettingsContent
+import safe.kernel.flash.ui.screens.repo.RepoContent
 import safe.kernel.flash.ui.screens.wizard.WizardScreen
 import safe.kernel.flash.ui.screens.reboot.RebootContent
 import safe.kernel.flash.ui.screens.reboot.RebootViewModel
@@ -554,7 +556,18 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                     composable("flash") {
-                                        RefreshableScreen(mainViewModel, navController) {
+                                        RefreshableScreen(
+                                            mainViewModel, navController,
+                                            actions = {
+                                                IconButton(onClick = { navController.navigate("repo") }) {
+                                                    Icon(
+                                                        Icons.Filled.Cloud,
+                                                        contentDescription = "GKI/OKI 仓库",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        ) {
                                             FlashHomeContent(mainViewModel, navController)
                                         }
                                     }
@@ -713,6 +726,9 @@ class MainActivity : ComponentActivity() {
                             RefreshableScreen(mainViewModel, navController) {
                                 DiagPortContent(navController)
                             }
+                        }
+                        composable("repo") {
+                            RepoContent(navController)
                         }
                         composable("history") {
                             RefreshableScreen(mainViewModel, navController) {

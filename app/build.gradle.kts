@@ -16,8 +16,8 @@ android {
         applicationId = "safe.kernel.flash"
         minSdk = 29
         targetSdk = 36
-        versionCode = 20400
-        versionName = "2.4"
+        versionCode = 20600
+        versionName = "2.6"
 
         javaCompileOptions {
             annotationProcessorOptions {
