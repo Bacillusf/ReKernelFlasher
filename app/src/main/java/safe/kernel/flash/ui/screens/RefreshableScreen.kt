@@ -41,9 +41,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
-import kotlinx.serialization.ExperimentalSerializationApi
+import safe.kernel.flash.ui.theme.LocalGlassTokens
+import safe.kernel.flash.ui.theme.liquidGlass
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -56,9 +58,9 @@ fun RefreshableScreen(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val statusBar = WindowInsets.statusBars.only(WindowInsetsSides.Top).asPaddingValues()
     val navigationBars = WindowInsets.navigationBars.asPaddingValues()
     val context = LocalContext.current
+    val tokens = LocalGlassTokens.current
     val state = rememberPullRefreshState(viewModel.isRefreshing, onRefresh = {
         viewModel.refresh(context)
     })
@@ -89,13 +91,23 @@ fun RefreshableScreen(
                 actions = actions,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
-                )
+                    scrolledContainerColor = Color.Transparent
+                ),
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .padding(top = WindowInsets.statusBars.only(WindowInsetsSides.Top).asPaddingValues().calculateTopPadding())
+                    .liquidGlass(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        tint = tokens.surface.copy(alpha = 0.72f),
+                        blurRadius = 18.dp,
+                        highlightAlpha = 0.24f,
+                    )
             )
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .pullRefresh(state, swipeEnabled)
                 .fillMaxSize(),

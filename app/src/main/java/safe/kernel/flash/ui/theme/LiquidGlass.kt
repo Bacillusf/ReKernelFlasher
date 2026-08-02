@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -23,28 +24,43 @@ import androidx.compose.ui.unit.dp
 
 fun Modifier.liquidGlass(
     shape: Shape = RoundedCornerShape(20.dp),
-    blurRadius: Dp = 24.dp,
+    blurRadius: Dp = 22.dp,
     tint: Color? = null,
     borderWidth: Dp = 0.5.dp,
+    highlightAlpha: Float = 0.42f,
 ): Modifier = composed {
     val tokens = LocalGlassTokens.current
     val baseTint = tint ?: tokens.surface
     val border = tokens.outline
+    val shine = tokens.highlight.copy(alpha = highlightAlpha)
+    val shade = tokens.scrim.copy(alpha = 0.10f)
 
-    val base = this
-        .background(baseTint, shape)
-        .border(borderWidth, border, shape)
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        base.graphicsLayer {
+    val glassLayer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Modifier.graphicsLayer {
             clip = true
             renderEffect = RenderEffect
                 .createBlurEffect(blurRadius.toPx(), blurRadius.toPx(), Shader.TileMode.CLAMP)
                 .asComposeRenderEffect()
         }
     } else {
-        base
+        Modifier
     }
+
+    this
+        .then(glassLayer)
+        .background(baseTint, shape)
+        .border(borderWidth, border, shape)
+        .drawWithContent {
+            drawContent()
+            drawRoundRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(shine, Color.Transparent, shade),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, size.height)
+                ),
+                cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx())
+            )
+        }
 }
 
 fun Modifier.softShadow(

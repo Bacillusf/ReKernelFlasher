@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,18 +27,28 @@ import androidx.core.view.WindowCompat
 data class GlassTokens(
     val surface: Color,
     val surfaceVariant: Color,
+    val surfaceContainer: Color,
     val outline: Color,
     val outlineVariant: Color,
-    val onSurface: Color
+    val highlight: Color,
+    val scrim: Color,
+    val onSurface: Color,
+    val navContainer: Color,
+    val selectedContainer: Color,
 )
 
 val LocalGlassTokens = compositionLocalOf {
     GlassTokens(
         surface = Color.White,
         surfaceVariant = Color.White,
+        surfaceContainer = Color.White,
         outline = Color.Black,
         outlineVariant = Color.Black,
-        onSurface = Color.Black
+        highlight = Color.White,
+        scrim = Color.Black,
+        onSurface = Color.Black,
+        navContainer = Color.White,
+        selectedContainer = Color.Black,
     )
 }
 
@@ -56,10 +65,12 @@ private val MiuixLight = lightColorScheme(
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFD6E4FF),
     onTertiaryContainer = Color(0xFF0A1F3D),
-    surface = Color(0xFFF2F2F7),
+    surface = Color(0xFFF7F7FA),
     onSurface = Color(0xFF1A1A1A),
     surfaceVariant = Color(0xFFFFFFFF),
     onSurfaceVariant = Color(0xFF5F6368),
+    surfaceContainer = Color(0xFFFFFFFF),
+    surfaceContainerHigh = Color(0xFFF2F2F7),
     background = Color(0xFFF2F2F7),
     onBackground = Color(0xFF1A1A1A),
     outline = Color(0xFFD2D2D7),
@@ -87,6 +98,8 @@ private val MiuixDark = darkColorScheme(
     onSurface = Color(0xFFE8EAED),
     surfaceVariant = Color(0xFF1E1E1F),
     onSurfaceVariant = Color(0xFF9AA0A6),
+    surfaceContainer = Color(0xFF1E1E1F),
+    surfaceContainerHigh = Color(0xFF242426),
     background = Color(0xFF0E0E0F),
     onBackground = Color(0xFFE8EAED),
     outline = Color(0xFF3C4043),
@@ -98,19 +111,19 @@ private val MiuixDark = darkColorScheme(
 )
 
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(22.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 private val AppTypography = Typography(
-    displayLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
-    displayMedium = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.25).sp),
-    headlineLarge = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.2).sp),
+    displayLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold),
+    displayMedium = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold),
+    headlineLarge = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.SemiBold),
     headlineMedium = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
-    headlineSmall = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.1).sp),
+    headlineSmall = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
     titleLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
     titleSmall = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
@@ -153,17 +166,27 @@ fun MiuixThemeProvider(
         GlassTokens(
             surface = Color(0xCC1E1E1F),
             surfaceVariant = Color(0xB32C2C2E),
+            surfaceContainer = Color(0xD9242426),
             outline = Color(0x33FFFFFF),
             outlineVariant = Color(0x1FFFFFFF),
-            onSurface = Color(0xFFE8EAED)
+            highlight = Color(0x40FFFFFF),
+            scrim = Color(0x52000000),
+            onSurface = Color(0xFFE8EAED),
+            navContainer = Color(0xD91E1E1F),
+            selectedContainer = Color(0xFF2C3E5C),
         )
     } else {
         GlassTokens(
             surface = Color(0xCCFFFFFF),
             surfaceVariant = Color(0xB3F2F2F7),
+            surfaceContainer = Color(0xE6FFFFFF),
             outline = Color(0x33000000),
             outlineVariant = Color(0x1F000000),
-            onSurface = Color(0xFF1A1A1A)
+            highlight = Color(0xB3FFFFFF),
+            scrim = Color(0x1A000000),
+            onSurface = Color(0xFF1A1A1A),
+            navContainer = Color(0xE6FFFFFF),
+            selectedContainer = Color(0xFFD6E4FF),
         )
     }
 
