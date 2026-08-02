@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,22 +53,23 @@ fun GlassNavigationBar(
     val tokens = LocalGlassTokens.current
     val indicatorColor = MaterialTheme.colorScheme.primary
     val selectedText = MaterialTheme.colorScheme.onPrimary
-    val idleText = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
+    val idleText = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
     val barShape = RoundedCornerShape(30.dp)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp)
+            .padding(horizontal = 20.dp)
             .padding(bottom = 8.dp + navPadding.calculateBottomPadding())
-            .softShadow(cornerRadius = 30.dp, alpha = 0.14f, offsetY = 8.dp)
+            .height(58.dp)
+            .softShadow(cornerRadius = 30.dp, alpha = 0.13f, offsetY = 8.dp)
+            .clip(barShape)
             .liquidGlass(
                 shape = barShape,
+                cornerRadius = 30.dp,
                 tint = tokens.navContainer,
-                blurRadius = 26.dp,
-                highlightAlpha = 0.35f,
+                highlightAlpha = 0.14f,
             )
-            .height(60.dp)
             .padding(horizontal = 7.dp, vertical = 5.dp)
     ) {
         Row(
@@ -94,7 +94,7 @@ fun GlassNavigationBar(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .height(50.dp)
+                        .height(48.dp)
                         .clip(CircleShape)
                         .background(indicatorColor.copy(alpha = bgAlpha))
                         .clickable(
@@ -109,7 +109,7 @@ fun GlassNavigationBar(
                         imageVector = item.icon,
                         contentDescription = item.label,
                         tint = tint,
-                        modifier = Modifier.size((22 * scale).dp)
+                        modifier = Modifier.size((21 * scale).dp)
                     )
                     Spacer(Modifier.height(1.dp))
                     Text(

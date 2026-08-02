@@ -13,28 +13,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import safe.kernel.flash.ui.theme.LocalGlassTokens
-import safe.kernel.flash.ui.theme.liquidGlass
 import safe.kernel.flash.ui.theme.softShadow
 
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(20.dp),
-    backgroundColor: Color = LocalGlassTokens.current.surfaceContainer,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     border: BorderStroke? = null,
     shadow: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val glassModifier = modifier
-        .then(if (shadow) Modifier.softShadow(cornerRadius = 20.dp, alpha = 0.08f, offsetY = 4.dp) else Modifier)
-        .liquidGlass(shape = shape, tint = backgroundColor, blurRadius = 18.dp)
+    val surfaceModifier = modifier
+        .then(if (shadow) Modifier.softShadow(cornerRadius = 20.dp, alpha = 0.06f, offsetY = 3.dp) else Modifier)
 
     Surface(
-        modifier = glassModifier,
+        modifier = surfaceModifier,
         shape = shape,
-        color = Color.Transparent,
+        color = backgroundColor,
         contentColor = contentColor,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,

@@ -2,10 +2,10 @@ package safe.kernel.flash.ui.components
 
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import safe.kernel.flash.ui.theme.LocalGlassTokens
 
 @Composable
 fun GlassCard(
@@ -15,7 +15,7 @@ fun GlassCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
-        backgroundColor = LocalGlassTokens.current.surface,
+        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
         shadow = true,
         content = content
     )

@@ -1,8 +1,5 @@
 package safe.kernel.flash.ui.theme
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,57 +7,55 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/**
+ * KSU-style liquid-glass surface for floating chrome.
+ *
+ * This modifier only paints behind content. It never applies RenderEffect or draws an overlay after
+ * content, so text/icons remain sharp and readable. Use it on navigation chrome; normal content
+ * cards should use Material surfaces.
+ */
 fun Modifier.liquidGlass(
     shape: Shape = RoundedCornerShape(20.dp),
-    blurRadius: Dp = 22.dp,
+    cornerRadius: Dp = 24.dp,
     tint: Color? = null,
     borderWidth: Dp = 0.5.dp,
-    highlightAlpha: Float = 0.42f,
+    highlightAlpha: Float = 0.18f,
 ): Modifier = composed {
     val tokens = LocalGlassTokens.current
     val baseTint = tint ?: tokens.surface
     val border = tokens.outline
-    val shine = tokens.highlight.copy(alpha = highlightAlpha)
-    val shade = tokens.scrim.copy(alpha = 0.10f)
-
-    val glassLayer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        Modifier.graphicsLayer {
-            clip = true
-            renderEffect = RenderEffect
-                .createBlurEffect(blurRadius.toPx(), blurRadius.toPx(), Shader.TileMode.CLAMP)
-                .asComposeRenderEffect()
-        }
-    } else {
-        Modifier
-    }
+    val radiusPx = cornerRadius
 
     this
-        .then(glassLayer)
-        .background(baseTint, shape)
-        .border(borderWidth, border, shape)
-        .drawWithContent {
-            drawContent()
+        .drawBehind {
+            val radius = radiusPx.toPx()
+            drawRoundRect(
+                color = baseTint,
+                cornerRadius = CornerRadius(radius, radius)
+            )
             drawRoundRect(
                 brush = Brush.linearGradient(
-                    colors = listOf(shine, Color.Transparent, shade),
+                    colors = listOf(
+                        tokens.highlight.copy(alpha = highlightAlpha),
+                        Color.Transparent,
+                        tokens.scrim.copy(alpha = 0.04f)
+                    ),
                     start = Offset(0f, 0f),
                     end = Offset(size.width, size.height)
                 ),
-                cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx())
+                cornerRadius = CornerRadius(radius, radius)
             )
         }
+        .border(borderWidth, border, shape)
 }
 
 fun Modifier.softShadow(
