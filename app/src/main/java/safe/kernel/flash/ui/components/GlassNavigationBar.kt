@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.Backdrop
 
 data class NavItem(
     val route: String,
@@ -37,6 +37,7 @@ fun GlassNavigationBar(
     items: List<NavItem>,
     currentRoute: String?,
     onItemClick: (NavItem) -> Unit,
+    backdrop: Backdrop,
     modifier: Modifier = Modifier
 ) {
     val routeSelectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
@@ -45,10 +46,6 @@ fun GlassNavigationBar(
         selectedIndex = routeSelectedIndex
     }
     val navPadding = WindowInsets.navigationBars.asPaddingValues()
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val backdrop = rememberLayerBackdrop {
-        drawRect(backgroundColor)
-    }
 
     Box(
         modifier = modifier

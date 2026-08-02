@@ -110,6 +110,8 @@ import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import kotlin.system.exitProcess
 
 object SharedViewModels {
@@ -189,7 +191,7 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setBackgroundDrawableResource(R.color.window_background)
-        window.navigationBarColor = getColor(R.color.window_background)
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -499,9 +501,18 @@ class MainActivity : ComponentActivity() {
                         val lastWizardVersion = prefs.getInt("version", 0)
                         val wizardDone = lastWizardVersion >= BuildConfig.VERSION_CODE
                         val startDest = if (wizardDone) "main" else "wizard"
+                        val floatingNavBackground = MaterialTheme.colorScheme.background
+                        val floatingNavBackdrop = rememberLayerBackdrop {
+                            drawRect(floatingNavBackground)
+                            drawContent()
+                        }
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) {
-                                NavHost(navController = navController, startDestination = startDest) {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = startDest,
+                                    modifier = Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
+                                ) {
                                     composable("main") {
                                         val showRebootMenu = remember { mutableStateOf(false) }
                                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
@@ -721,6 +732,7 @@ class MainActivity : ComponentActivity() {
                                             NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
                                         ),
                                         currentRoute = currentRoute,
+                                        backdrop = floatingNavBackdrop,
                                         onItemClick = { item ->
                                             navController.navigate(item.route) {
                                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
