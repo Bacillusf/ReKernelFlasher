@@ -84,11 +84,9 @@ fun AnimatedConfirmDialog(
                         shape = RoundedCornerShape(24.dp),
                         color = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
-                        tonalElevation = 6.dp,
-                        shadowElevation = 12.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .softShadow(cornerRadius = 24.dp, alpha = 0.20f, offsetY = 12.dp)
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier

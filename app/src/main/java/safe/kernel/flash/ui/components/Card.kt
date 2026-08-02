@@ -13,16 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
-import safe.kernel.flash.ui.theme.softShadow
 
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp),
+    shape: Shape = RoundedCornerShape(24.dp),
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    border: BorderStroke? = null,
-    shadow: Boolean = true,
+    border: BorderStroke? = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)),
+    shadow: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(

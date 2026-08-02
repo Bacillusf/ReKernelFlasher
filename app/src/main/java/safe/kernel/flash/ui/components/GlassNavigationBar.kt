@@ -1,6 +1,9 @@
 package safe.kernel.flash.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
@@ -10,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,22 +41,27 @@ fun GlassNavigationBar(
         drawRect(backgroundColor)
     }
 
-    FloatingBottomBar(
+    Box(
         modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 18.dp)
             .padding(bottom = 10.dp + navPadding.calculateBottomPadding()),
-        selectedIndex = { selectedIndex },
-        onSelected = { index -> items.getOrNull(index)?.let(onItemClick) },
-        backdrop = backdrop,
-        tabsCount = items.size,
-        isBlurEnabled = true,
+        contentAlignment = Alignment.Center,
     ) {
-        items.forEachIndexed { index, item ->
-            NavigationBarTab(
-                selected = index == selectedIndex,
-                item = item,
-                onClick = { onItemClick(item) }
-            )
+        FloatingBottomBar(
+            selectedIndex = { selectedIndex },
+            onSelected = { index -> items.getOrNull(index)?.let(onItemClick) },
+            backdrop = backdrop,
+            tabsCount = items.size,
+            isBlurEnabled = true,
+        ) {
+            items.forEachIndexed { index, item ->
+                NavigationBarTab(
+                    selected = index == selectedIndex,
+                    item = item,
+                    onClick = { onItemClick(item) }
+                )
+            }
         }
     }
 }
@@ -69,7 +78,10 @@ private fun RowScope.NavigationBarTab(
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
     }
 
-    FloatingBottomBarItem(onClick = onClick) {
+    FloatingBottomBarItem(
+        onClick = onClick,
+        modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+    ) {
         Icon(
             imageVector = item.icon,
             contentDescription = item.label,

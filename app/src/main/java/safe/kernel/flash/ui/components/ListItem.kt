@@ -1,5 +1,6 @@
 package safe.kernel.flash.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +27,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import safe.kernel.flash.ui.theme.softShadow
 
 data class ListItemIconColors(
     val container: Color,
@@ -47,7 +47,7 @@ fun ListItem(
     enabled: Boolean = true,
 ) {
     val alpha = if (enabled) 1f else 0.42f
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(22.dp)
     val containerColor = if (enabled) {
         MaterialTheme.colorScheme.surfaceVariant
     } else {
@@ -63,15 +63,16 @@ fun ListItem(
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.64f)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            modifier = Modifier.padding(horizontal = 15.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (leadingIcon != null) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .background(
                             color = leadingColors?.container ?: MaterialTheme.colorScheme.primaryContainer,
                             shape = CircleShape
