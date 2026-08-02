@@ -13,6 +13,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,7 +39,11 @@ fun GlassNavigationBar(
     onItemClick: (NavItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val selectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    val routeSelectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    var selectedIndex by remember { mutableIntStateOf(routeSelectedIndex) }
+    LaunchedEffect(routeSelectedIndex) {
+        selectedIndex = routeSelectedIndex
+    }
     val navPadding = WindowInsets.navigationBars.asPaddingValues()
     val backgroundColor = MaterialTheme.colorScheme.background
     val backdrop = rememberLayerBackdrop {
@@ -50,7 +59,10 @@ fun GlassNavigationBar(
     ) {
         FloatingBottomBar(
             selectedIndex = { selectedIndex },
-            onSelected = { index -> items.getOrNull(index)?.let(onItemClick) },
+            onSelected = { index ->
+                selectedIndex = index
+                items.getOrNull(index)?.let(onItemClick)
+            },
             backdrop = backdrop,
             tabsCount = items.size,
             isBlurEnabled = true,
@@ -59,7 +71,10 @@ fun GlassNavigationBar(
                 NavigationBarTab(
                     selected = index == selectedIndex,
                     item = item,
-                    onClick = { onItemClick(item) }
+                    onClick = {
+                        selectedIndex = index
+                        onItemClick(item)
+                    }
                 )
             }
         }

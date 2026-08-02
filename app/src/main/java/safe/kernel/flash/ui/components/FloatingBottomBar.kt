@@ -36,12 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -211,7 +209,8 @@ fun FloatingBottomBar(
         }
     }
 
-    var currentIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex()) }
+    val selectedIndexValue = selectedIndex().coerceIn(0, tabsCount - 1)
+    var currentIndex by remember { mutableIntStateOf(selectedIndexValue) }
 
     class DampedDragAnimationHolder {
         var instance: DampedDragAnimation? = null
@@ -222,7 +221,7 @@ fun FloatingBottomBar(
     val dampedDragAnimation = remember(animationScope, tabsCount, density, isLtr) {
         DampedDragAnimation(
             animationScope = animationScope,
-            initialValue = selectedIndex().toFloat(),
+            initialValue = selectedIndexValue.toFloat(),
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
@@ -264,8 +263,11 @@ fun FloatingBottomBar(
         ).also { holder.instance = it }
     }
 
-    LaunchedEffect(selectedIndex) {
-        snapshotFlow { selectedIndex() }.collectLatest { currentIndex = it }
+    LaunchedEffect(selectedIndexValue, dampedDragAnimation) {
+        if (currentIndex != selectedIndexValue) {
+            currentIndex = selectedIndexValue
+            dampedDragAnimation.animateToValue(selectedIndexValue.toFloat())
+        }
     }
     LaunchedEffect(dampedDragAnimation) {
         snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
@@ -304,14 +306,6 @@ fun FloatingBottomBar(
                     tabWidthPx = (contentWidthPx / tabsCount).coerceAtLeast(0f)
                 }
                 .graphicsLayer { translationX = panelOffset }
-                .dropShadow(
-                    shape = pillShape,
-                    shadow = Shadow(
-                        radius = 10.dp,
-                        color = Color.Black,
-                        alpha = if (isInDark) 0.2f else 0.1f,
-                    ),
-                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
