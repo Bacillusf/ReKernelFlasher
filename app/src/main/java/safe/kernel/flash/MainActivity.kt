@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -187,6 +188,8 @@ class MainActivity : ComponentActivity() {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         val splashScreen = installSplashScreen()
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.setBackgroundDrawableResource(R.color.window_background)
+        window.navigationBarColor = getColor(R.color.window_background)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -710,6 +713,7 @@ class MainActivity : ComponentActivity() {
                     }
                                 if (isTabRoute) {
                                     GlassNavigationBar(
+                                        modifier = Modifier.align(Alignment.BottomCenter),
                                         items = listOf(
                                             NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
                                             NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
