@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
 
     private var rootServiceConnected: Boolean = false
     private var backendInitializationStarted: Boolean = false
-    private var openMainWhenBackendReady: Boolean = true
+    private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
     private lateinit var mainListener: MainListener
@@ -226,6 +226,7 @@ class MainActivity : ComponentActivity() {
         val wizardDone = getSharedPreferences("wizard", 0)
             .getInt("version", 0) >= BuildConfig.VERSION_CODE
         if (!wizardDone) {
+            openMainWhenBackendReady = false
             showRootRequiredWizard()
             return
         }
@@ -261,14 +262,18 @@ class MainActivity : ComponentActivity() {
                         RootService.bind(intent, AidlConnection())
                     } else {
                         backendInitializationStarted = false
-                        showRootRequiredWizard()
+                        if (openMainWhenReady || openMainWhenBackendReady) {
+                            showStartupError(getString(R.string.root_required))
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
                     backendInitializationStarted = false
-                    showStartupError(e.message ?: getString(R.string.root_required))
+                    if (openMainWhenReady || openMainWhenBackendReady) {
+                        showStartupError(e.message ?: getString(R.string.root_required))
+                    }
                 }
             }
         }
@@ -436,7 +441,9 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
-                    showStartupError(e.message ?: getString(R.string.root_required))
+                    if (openMainWhenBackendReady) {
+                        showStartupError(e.message ?: getString(R.string.root_required))
+                    }
                 }
                 return@launch
             }
