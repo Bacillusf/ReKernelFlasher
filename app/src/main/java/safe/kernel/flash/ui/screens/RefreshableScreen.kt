@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,6 +45,12 @@ import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
+import safe.kernel.flash.ui.components.liquid.vibrancy
+import safe.kernel.flash.ui.components.liquid.lens
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.drawBackdrop
+import top.yukonga.miuix.kmp.blur.blur
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -76,6 +83,7 @@ fun RefreshableScreen(
         label = "expandedTitleAlpha"
     )
     val title = stringResource(R.string.app_name)
+    val topBarBackdrop = rememberLayerBackdrop()
 
     Box(
         modifier = Modifier
@@ -88,7 +96,8 @@ fun RefreshableScreen(
                 .padding(horizontal = 16.dp)
                 .padding(top = statusBar.calculateTopPadding() + 68.dp)
                 .fillMaxSize()
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState)
+                .layerBackdrop(topBarBackdrop),
             content = {
                 Text(
                     text = title,
@@ -108,7 +117,20 @@ fun RefreshableScreen(
                 .fillMaxWidth()
                 .padding(top = statusBar.calculateTopPadding())
                 .height(56.dp)
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = 4.dp)
+                .drawBackdrop(
+                    backdrop = topBarBackdrop,
+                    shape = { RectangleShape },
+                    effects = {
+                        vibrancy()
+                        blur(4.dp.toPx(), 4.dp.toPx())
+                        lens(
+                            refractionHeight = 16.dp.toPx(),
+                            refractionAmount = 18.dp.toPx(),
+                        )
+                    },
+                    onDrawSurface = {},
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(Modifier.size(48.dp))
