@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -34,15 +35,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
+import safe.kernel.flash.ui.components.liquid.lens
+import safe.kernel.flash.ui.components.liquid.vibrancy
+import top.yukonga.miuix.kmp.blur.Backdrop
+import top.yukonga.miuix.kmp.blur.blur
+import top.yukonga.miuix.kmp.blur.drawBackdrop
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -52,6 +60,8 @@ fun RefreshableScreen(
     viewModel: MainViewModel,
     navController: NavController,
     swipeEnabled: Boolean = false,
+    backdrop: Backdrop? = null,
+    bottomContentPadding: Dp = 16.dp,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -86,7 +96,7 @@ fun RefreshableScreen(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(top = statusBar.calculateTopPadding() + 68.dp)
-                .padding(bottom = 16.dp + navigationBars.calculateBottomPadding())
+                .padding(bottom = bottomContentPadding + navigationBars.calculateBottomPadding())
                 .fillMaxSize()
                 .verticalScroll(scrollState),
             content = {
@@ -101,6 +111,28 @@ fun RefreshableScreen(
                 content()
             }
         )
+
+        if (backdrop != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(statusBar.calculateTopPadding() + 56.dp)
+                    .alpha((collapsedProgress * 0.92f).coerceIn(0f, 0.92f))
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp) },
+                        effects = {
+                            vibrancy()
+                            blur(4.dp.toPx(), 4.dp.toPx())
+                            lens(
+                                refractionHeight = 16.dp.toPx(),
+                                refractionAmount = 18.dp.toPx(),
+                            )
+                        },
+                        onDrawSurface = {},
+                    )
+            )
+        }
 
         Row(
             modifier = Modifier

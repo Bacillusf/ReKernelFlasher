@@ -156,6 +156,7 @@ class MainActivity : ComponentActivity() {
 
     private var rootServiceConnected: Boolean = false
     private var backendInitializationStarted: Boolean = false
+    private var backendToolsPreparationStarted: Boolean = false
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
@@ -426,6 +427,18 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            readyFileSystemManager = fileSystemManager
+            if (openMainWhenBackendReady) {
+                fadeToContent { showMainContent(fileSystemManager) }
+            }
+        }
+        prepareBackendTools()
+    }
+
+    private fun prepareBackendTools() {
+        if (backendToolsPreparationStarted) return
+        backendToolsPreparationStarted = true
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 Shell.cmd("cd $filesDir").exec()
@@ -439,21 +452,9 @@ class MainActivity : ComponentActivity() {
                 copyAsset("payload-dumper-go")
                 copyAsset("flash_ak3.sh")
                 copyAsset("flash_ak3_mkbootfs.sh")
-                delay(260)
             } catch (e: Exception) {
+                backendToolsPreparationStarted = false
                 Log.e(TAG, e.message, e)
-                withContext(Dispatchers.Main) {
-                    if (openMainWhenBackendReady) {
-                        showStartupError(e.message ?: getString(R.string.root_required))
-                    }
-                }
-                return@launch
-            }
-            withContext(Dispatchers.Main) {
-                readyFileSystemManager = fileSystemManager
-                if (openMainWhenBackendReady) {
-                    fadeToContent { showMainContent(fileSystemManager) }
-                }
             }
         }
     }
@@ -737,7 +738,7 @@ class MainActivity : ComponentActivity() {
                                         when (page) {
                                             0 -> {
                                                 val showRebootMenu = remember { mutableStateOf(false) }
-                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
+                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, backdrop = floatingNavBackdrop, bottomContentPadding = 120.dp, actions = {
                                                     Box {
                                                         IconButton(onClick = { showRebootMenu.value = true }) {
                                                             Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
@@ -755,7 +756,10 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                             1 -> RefreshableScreen(
-                                                mainViewModel, navController,
+                                                mainViewModel,
+                                                navController,
+                                                backdrop = floatingNavBackdrop,
+                                                bottomContentPadding = 120.dp,
                                                 actions = {
                                                     IconButton(onClick = { navController.navigate("repo") }) {
                                                         Icon(
@@ -770,11 +774,21 @@ class MainActivity : ComponentActivity() {
                                             }
                                             2 -> {
                                                 LaunchedEffect(Unit) { backupsViewModel.clearCurrent() }
-                                                RefreshableScreen(mainViewModel, navController) {
+                                                RefreshableScreen(
+                                                    mainViewModel,
+                                                    navController,
+                                                    backdrop = floatingNavBackdrop,
+                                                    bottomContentPadding = 120.dp
+                                                ) {
                                                     BackupsContent(backupsViewModel, navController)
                                                 }
                                             }
-                                            3 -> RefreshableScreen(mainViewModel, navController) {
+                                            3 -> RefreshableScreen(
+                                                mainViewModel,
+                                                navController,
+                                                backdrop = floatingNavBackdrop,
+                                                bottomContentPadding = 120.dp
+                                            ) {
                                                 SettingsContent(mainViewModel, navController)
                                             }
                                         }
