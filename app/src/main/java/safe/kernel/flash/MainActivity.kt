@@ -994,91 +994,31 @@ class MainActivity : ComponentActivity() {
                             drawRect(floatingNavBackground)
                             drawContent()
                         }
-                        LaunchedEffect(tabIndex, isTabRoute) {
-                            if (isTabRoute && pagerState.currentPage != tabIndex) {
-                                pagerState.animateScrollToPage(tabIndex)
-                            }
-                        }
-                        LaunchedEffect(pagerState.settledPage, isTabRoute) {
-                            if (isTabRoute) {
-                                val targetRoute = tabRoutes[pagerState.settledPage]
-                                if (targetRoute != currentRoute) {
-                                    navigateToTab(targetRoute)
+                        @Composable
+                        fun MainTabPager() {
+                            LaunchedEffect(tabIndex, isTabRoute) {
+                                if (isTabRoute && pagerState.currentPage != tabIndex) {
+                                    pagerState.animateScrollToPage(tabIndex)
                                 }
                             }
-                        }
-                        Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) {
+                            LaunchedEffect(pagerState.settledPage, isTabRoute) {
                                 if (isTabRoute) {
-                                    HorizontalPager(
-                                        state = pagerState,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .layerBackdrop(floatingNavBackdrop),
-                                        beyondViewportPageCount = 1,
-                                        key = { page -> tabRoutes[page] }
-                                    ) { page ->
-                                        when (tabRoutes[page]) {
-                                            "main" -> {
-                                                val showRebootMenu = remember { mutableStateOf(false) }
-                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, bottomContentPadding = 120.dp, actions = {
-                                                    Box {
-                                                        IconButton(onClick = { showRebootMenu.value = true }) {
-                                                            Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
-                                                        }
-                                                        DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
-                                                        }
-                                                    }
-                                                }) {
-                                                    MainContent(mainViewModel, navController)
-                                                }
-                                            }
-                                            "flash" -> {
-                                                RefreshableScreen(
-                                                    mainViewModel,
-                                                    navController,
-                                                    bottomContentPadding = 120.dp,
-                                                    actions = {
-                                                        IconButton(onClick = { navController.navigate("repo") }) {
-                                                            Icon(
-                                                                Icons.Filled.Cloud,
-                                                                contentDescription = "GKI/OKI 仓库",
-                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
-                                                    }
-                                                ) {
-                                                    FlashHomeContent(mainViewModel, navController)
-                                                }
-                                            }
-                                            "backups" -> {
-                                                backupsViewModel.clearCurrent()
-                                                RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
-                                                    BackupsContent(backupsViewModel, navController)
-                                                }
-                                            }
-                                            "settings" -> {
-                                                RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
-                                                    SettingsContent(mainViewModel, navController)
-                                                }
-                                            }
-                                        }
+                                    val targetRoute = tabRoutes[pagerState.settledPage]
+                                    if (targetRoute != currentRoute) {
+                                        navigateToTab(targetRoute)
                                     }
                                 }
-                                NavHost(
-                                    navController = navController,
-                                    startDestination = startDest,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .layerBackdrop(floatingNavBackdrop)
-                                        .then(if (isTabRoute) Modifier.size(0.dp) else Modifier)
-                                ) {
-                                    composable("main") {
+                            }
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(floatingNavBackdrop),
+                                beyondViewportPageCount = 1,
+                                key = { page -> tabRoutes[page] }
+                            ) { page ->
+                                when (tabRoutes[page]) {
+                                    "main" -> {
                                         val showRebootMenu = remember { mutableStateOf(false) }
                                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true, bottomContentPadding = 120.dp, actions = {
                                             Box {
@@ -1097,7 +1037,7 @@ class MainActivity : ComponentActivity() {
                                             MainContent(mainViewModel, navController)
                                         }
                                     }
-                                    composable("flash") {
+                                    "flash" -> {
                                         RefreshableScreen(
                                             mainViewModel,
                                             navController,
@@ -1115,10 +1055,37 @@ class MainActivity : ComponentActivity() {
                                             FlashHomeContent(mainViewModel, navController)
                                         }
                                     }
-                                    composable("settings") {
+                                    "backups" -> {
+                                        LaunchedEffect(Unit) { backupsViewModel.clearCurrent() }
+                                        RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                            BackupsContent(backupsViewModel, navController)
+                                        }
+                                    }
+                                    "settings" -> {
                                         RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
                                             SettingsContent(mainViewModel, navController)
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        Column(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = startDest,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .layerBackdrop(floatingNavBackdrop)
+                                ) {
+                                    composable("main") {
+                                        MainTabPager()
+                                    }
+                                    composable("flash") {
+                                        MainTabPager()
+                                    }
+                                    composable("settings") {
+                                        MainTabPager()
                                     }
                         if (mainViewModel.isAb) {
                             composable("slot_a", content = slotContentA)
@@ -1161,11 +1128,8 @@ class MainActivity : ComponentActivity() {
                             composable("slot/backups/{backupId}/flash/ak3", content = slotBackupFlashContent)
                         }
                         composable("backups") {
-                            backupsViewModel.clearCurrent()
-                            RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
-                                BackupsContent(backupsViewModel, navController)
-                            }
-                        }
+                                        MainTabPager()
+                                    }
                         composable("backups/{backupId}") { backStackEntry ->
                             backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                             if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
