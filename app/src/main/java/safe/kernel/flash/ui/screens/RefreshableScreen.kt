@@ -1,5 +1,8 @@
 package safe.kernel.flash.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,13 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -46,11 +51,6 @@ import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
-import safe.kernel.flash.ui.components.liquid.lens
-import safe.kernel.flash.ui.components.liquid.vibrancy
-import top.yukonga.miuix.kmp.blur.Backdrop
-import top.yukonga.miuix.kmp.blur.blur
-import top.yukonga.miuix.kmp.blur.drawBackdrop
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -60,7 +60,6 @@ fun RefreshableScreen(
     viewModel: MainViewModel,
     navController: NavController,
     swipeEnabled: Boolean = false,
-    backdrop: Backdrop? = null,
     bottomContentPadding: Dp = 16.dp,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
@@ -112,28 +111,6 @@ fun RefreshableScreen(
             }
         )
 
-        if (backdrop != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBar.calculateTopPadding() + 56.dp)
-                    .alpha((collapsedProgress * 0.92f).coerceIn(0f, 0.92f))
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp) },
-                        effects = {
-                            vibrancy()
-                            blur(4.dp.toPx(), 4.dp.toPx())
-                            lens(
-                                refractionHeight = 16.dp.toPx(),
-                                refractionAmount = 18.dp.toPx(),
-                            )
-                        },
-                        onDrawSurface = {},
-                    )
-            )
-        }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,7 +119,19 @@ fun RefreshableScreen(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(Modifier.size(48.dp))
+            if (hasBack) {
+                AnimatedVisibility(!viewModel.isRefreshing, enter = fadeIn(), exit = fadeOut()) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            } else {
+                Spacer(Modifier.size(48.dp))
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,

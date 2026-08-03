@@ -35,8 +35,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -58,9 +56,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
@@ -428,7 +426,18 @@ class MainActivity : ComponentActivity() {
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                prepareBackendToolsBlocking()
+                Shell.cmd("cd $filesDir").exec()
+                copyNativeBinary("lptools_static") // v20220825
+                copyNativeBinary("httools_static") // v3.2.0
+                copyNativeBinary("magiskboot") // v29.0
+                copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+                copyNativeBinary("busybox") // BusyBox v1.36.1.1
+                copyAsset("mkbootfs")
+                copyAsset("ksuinit")
+                copyAsset("payload-dumper-go")
+                copyAsset("flash_ak3.sh")
+                copyAsset("flash_ak3_mkbootfs.sh")
+                delay(260)
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
@@ -445,20 +454,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    private fun prepareBackendToolsBlocking() {
-        Shell.cmd("cd $filesDir").exec()
-        copyNativeBinary("lptools_static") // v20220825
-        copyNativeBinary("httools_static") // v3.2.0
-        copyNativeBinary("magiskboot") // v29.0
-        copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
-        copyNativeBinary("busybox") // BusyBox v1.36.1.1
-        copyAsset("mkbootfs")
-        copyAsset("ksuinit")
-        copyAsset("payload-dumper-go")
-        copyAsset("flash_ak3.sh")
-        copyAsset("flash_ak3_mkbootfs.sh")
     }
 
     private fun fadeToContent(render: () -> Unit) {
@@ -553,37 +548,7 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val tabRoutes = listOf("main", "flash", "backups", "settings")
-                    val tabNavItems = listOf(
-                        NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
-                        NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
-                        NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
-                        NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
-                    )
                     val isTabRoute = currentRoute in tabRoutes
-                    val selectedTabIndex = tabRoutes.indexOf(currentRoute).coerceAtLeast(0)
-                    val pagerState = rememberPagerState(
-                        initialPage = selectedTabIndex,
-                        pageCount = { tabRoutes.size }
-                    )
-                    val pagerScope = rememberCoroutineScope()
-                    fun navigateToTab(route: String) {
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                    LaunchedEffect(isTabRoute, selectedTabIndex) {
-                        if (isTabRoute && pagerState.currentPage != selectedTabIndex) {
-                            pagerState.animateScrollToPage(selectedTabIndex)
-                        }
-                    }
-                    LaunchedEffect(isTabRoute, pagerState.settledPage) {
-                        if (isTabRoute) {
-                            val settledRoute = tabRoutes[pagerState.settledPage]
-                            if (currentRoute != settledRoute) navigateToTab(settledRoute)
-                        }
-                    }
 
                     val dpiScale = mainViewModel.dpiScale
                     val density = LocalDensity.current
@@ -729,81 +694,53 @@ class MainActivity : ComponentActivity() {
                         }
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) {
-                                if (isTabRoute) {
-                                    HorizontalPager(
-                                        state = pagerState,
-                                        beyondViewportPageCount = 3,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .layerBackdrop(floatingNavBackdrop)
-                                    ) { page ->
-                                        when (page) {
-                                            0 -> {
-                                                val showRebootMenu = remember { mutableStateOf(false) }
-                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, backdrop = floatingNavBackdrop, bottomContentPadding = 120.dp, actions = {
-                                                    Box {
-                                                        IconButton(onClick = { showRebootMenu.value = true }) {
-                                                            Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
-                                                        }
-                                                        DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
-                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
-                                                        }
-                                                    }
-                                                }) {
-                                                    MainContent(mainViewModel, navController)
-                                                }
-                                            }
-                                            1 -> RefreshableScreen(
-                                                mainViewModel,
-                                                navController,
-                                                backdrop = floatingNavBackdrop,
-                                                bottomContentPadding = 120.dp,
-                                                actions = {
-                                                    IconButton(onClick = { navController.navigate("repo") }) {
-                                                        Icon(
-                                                            Icons.Filled.Cloud,
-                                                            contentDescription = "GKI/OKI 仓库",
-                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                }
-                                            ) {
-                                                FlashHomeContent(mainViewModel, navController)
-                                            }
-                                            2 -> {
-                                                LaunchedEffect(Unit) { backupsViewModel.clearCurrent() }
-                                                RefreshableScreen(
-                                                    mainViewModel,
-                                                    navController,
-                                                    backdrop = floatingNavBackdrop,
-                                                    bottomContentPadding = 120.dp
-                                                ) {
-                                                    BackupsContent(backupsViewModel, navController)
-                                                }
-                                            }
-                                            3 -> RefreshableScreen(
-                                                mainViewModel,
-                                                navController,
-                                                backdrop = floatingNavBackdrop,
-                                                bottomContentPadding = 120.dp
-                                            ) {
-                                                SettingsContent(mainViewModel, navController)
-                                            }
-                                        }
-                                    }
-                                }
                                 NavHost(
                                     navController = navController,
                                     startDestination = startDest,
-                                    modifier = if (isTabRoute) Modifier.size(0.dp) else Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
+                                    modifier = Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
                                 ) {
-                                    composable("main") { Box(Modifier.fillMaxSize()) }
-                                    composable("flash") { Box(Modifier.fillMaxSize()) }
-                                    composable("settings") { Box(Modifier.fillMaxSize()) }
+                                    composable("main") {
+                                        val showRebootMenu = remember { mutableStateOf(false) }
+                                        RefreshableScreen(mainViewModel, navController, swipeEnabled = true, bottomContentPadding = 120.dp, actions = {
+                                            Box {
+                                                IconButton(onClick = { showRebootMenu.value = true }) {
+                                                    Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
+                                                }
+                                                DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
+                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
+                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
+                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
+                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
+                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
+                                                }
+                                            }
+                                        }) {
+                                            MainContent(mainViewModel, navController)
+                                        }
+                                    }
+                                    composable("flash") {
+                                        RefreshableScreen(
+                                            mainViewModel,
+                                            navController,
+                                            bottomContentPadding = 120.dp,
+                                            actions = {
+                                                IconButton(onClick = { navController.navigate("repo") }) {
+                                                    Icon(
+                                                        Icons.Filled.Cloud,
+                                                        contentDescription = "GKI/OKI 仓库",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        ) {
+                                            FlashHomeContent(mainViewModel, navController)
+                                        }
+                                    }
+                                    composable("settings") {
+                                        RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                            SettingsContent(mainViewModel, navController)
+                                        }
+                                    }
                         if (mainViewModel.isAb) {
                             composable("slot_a", content = slotContentA)
                             composable("slot_a/flash", content = slotFlashContentA)
@@ -844,7 +781,12 @@ class MainActivity : ComponentActivity() {
                             composable("slot/backups/{backupId}/restore/restore", content = slotBackupsContent)
                             composable("slot/backups/{backupId}/flash/ak3", content = slotBackupFlashContent)
                         }
-                        composable("backups") { Box(Modifier.fillMaxSize()) }
+                        composable("backups") {
+                            backupsViewModel.clearCurrent()
+                            RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                BackupsContent(backupsViewModel, navController)
+                            }
+                        }
                         composable("backups/{backupId}") { backStackEntry ->
                             backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                             if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
@@ -971,15 +913,19 @@ class MainActivity : ComponentActivity() {
                                 if (isTabRoute) {
                                     GlassNavigationBar(
                                         modifier = Modifier.align(Alignment.BottomCenter),
-                                        items = tabNavItems,
+                                        items = listOf(
+                                            NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
+                                            NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
+                                            NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
+                                            NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
+                                        ),
                                         currentRoute = currentRoute,
                                         backdrop = floatingNavBackdrop,
                                         onItemClick = { item ->
-                                            val targetPage = tabRoutes.indexOf(item.route)
-                                            if (targetPage >= 0) {
-                                                pagerScope.launch { pagerState.animateScrollToPage(targetPage) }
-                                            } else {
-                                                navigateToTab(item.route)
+                                            navController.navigate(item.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                                launchSingleTop = true
+                                                restoreState = true
                                             }
                                         }
                                     )
