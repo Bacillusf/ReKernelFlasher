@@ -45,8 +45,6 @@ import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
-import safe.kernel.flash.ui.components.liquid.vibrancy
-import safe.kernel.flash.ui.components.liquid.lens
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.drawBackdrop
@@ -84,6 +82,7 @@ fun RefreshableScreen(
     )
     val title = stringResource(R.string.app_name)
     val topBarBackdrop = rememberLayerBackdrop()
+    val topBarSurface = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
 
     Box(
         modifier = Modifier
@@ -122,14 +121,9 @@ fun RefreshableScreen(
                     backdrop = topBarBackdrop,
                     shape = { RectangleShape },
                     effects = {
-                        vibrancy()
-                        blur(4.dp.toPx(), 4.dp.toPx())
-                        lens(
-                            refractionHeight = 16.dp.toPx(),
-                            refractionAmount = 18.dp.toPx(),
-                        )
+                        blur(16.dp.toPx(), 16.dp.toPx())
                     },
-                    onDrawSurface = {},
+                    onDrawSurface = { drawRect(topBarSurface) },
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
