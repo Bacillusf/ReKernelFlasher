@@ -150,6 +150,15 @@ object SharedViewModels {
     lateinit var mainViewModel: MainViewModel
 }
 
+private enum class StartupMetaModule(
+    val displayName: String,
+    val assetPath: String,
+    val fileName: String,
+) {
+    MagicMount("MagicMountRS", "model/magic_mount_rs.zip", "magic_mount_rs.zip"),
+    OverlayFs("Meta-OverlayFS", "model/overlayfs.zip", "overlayfs.zip"),
+}
+
 @ExperimentalAnimationApi
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -171,6 +180,7 @@ class MainActivity : ComponentActivity() {
     private val startupCanRetry = mutableStateOf(false)
     private val startupFirstRunModuleChoice = mutableStateOf(false)
     private val startupIsInstallingModule = mutableStateOf(false)
+    private val startupSelectedMetaModule = mutableStateOf<StartupMetaModule?>(null)
     private var backendInitializationFailed: String? = null
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
@@ -352,25 +362,6 @@ class MainActivity : ComponentActivity() {
     private fun showLauncherStartup(firstRun: Boolean) {
         setContent {
             KernelFlasherTheme {
-                val pulse = rememberInfiniteTransition(label = "launcherStartupPulse")
-                val titleScale by pulse.animateFloat(
-                    initialValue = 0.96f,
-                    targetValue = 1.0f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 620, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "launcherStartupTitleScale"
-                )
-                val dotPulse by pulse.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 4f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 1040, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Restart
-                    ),
-                    label = "launcherStartupDots"
-                )
                 val loadingProgress by startupProgress
                 val loadingStatus by startupStatusText
                 val canRetry by startupCanRetry
@@ -398,7 +389,7 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.displaySmall,
                             color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.scale(titleScale)
+                            modifier = Modifier
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -412,8 +403,9 @@ class MainActivity : ComponentActivity() {
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val filledSegments = (animatedLoadingProgress.coerceIn(0f, 1f) * 4f).toInt().coerceIn(0, 4)
                             repeat(4) { index ->
-                                val active = index == dotPulse.toInt().coerceIn(0, 3)
+                                val active = index < filledSegments || animatedLoadingProgress >= 1f
                                 Box(
                                     modifier = Modifier
                                         .size(if (active) 40.dp else 28.dp, 7.dp)
@@ -431,13 +423,6 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { animatedLoadingProgress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth(0.62f),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
-                        )
                         if (canRetry || showModuleChoice) {
                             Spacer(Modifier.height(18.dp))
                         }
@@ -446,12 +431,23 @@ class MainActivity : ComponentActivity() {
                                 Text("重试")
                             }
                         } else if (showModuleChoice) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Button(
-                                    enabled = !installingModule,
-                                    onClick = { installFirstRunBackendModule() }
-                                ) {
-                                    Text(if (installingModule) "安装中" else "安装后端模块")
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Button(
+                                        enabled = !installingModule,
+                                        onClick = { installFirstRunBackendModule(StartupMetaModule.MagicMount) }
+                                    ) {
+                                        Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.MagicMount) "安装中" else "MagicMountRS")
+                                    }
+                                    Button(
+                                        enabled = !installingModule,
+                                        onClick = { installFirstRunBackendModule(StartupMetaModule.OverlayFs) }
+                                    ) {
+                                        Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.OverlayFs) "安装中" else "Meta-OverlayFS")
+                                    }
                                 }
                                 OutlinedButton(
                                     enabled = !installingModule,
@@ -471,6 +467,7 @@ class MainActivity : ComponentActivity() {
         startupCanRetry.value = false
         startupFirstRunModuleChoice.value = false
         startupIsInstallingModule.value = false
+        startupSelectedMetaModule.value = null
         startupProgress.floatValue = 0.08f
         startupStatusText.value = "正在检查 Root 权限和后端依赖..."
         openMainWhenBackendReady = false
@@ -521,43 +518,62 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun installFirstRunBackendModule() {
+    private fun installFirstRunBackendModule(metaModule: StartupMetaModule) {
         startupIsInstallingModule.value = true
+        startupSelectedMetaModule.value = metaModule
         startupFirstRunModuleChoice.value = false
         startupCanRetry.value = false
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                updateStartupProgress(0.16f, "正在复制后端模块...")
-                val tmpFile = File(filesDir, "RKF.zip")
-                assets.open("RKF.zip").use { input ->
-                    tmpFile.outputStream().use { output -> input.copyTo(output) }
-                }
-                updateStartupProgress(0.52f, "正在安装后端模块...")
-                val command = detectModuleInstallCommand(tmpFile)
-                    ?: throw IllegalStateException("无法识别 Root 管理器")
-                val result = Shell.cmd(command).exec()
-                tmpFile.delete()
-                if (!result.isSuccess) {
-                    val message = (result.err + result.out).joinToString("\n").ifBlank { "后端模块安装失败" }
-                    throw IllegalStateException(message)
-                }
-                updateStartupProgress(0.82f, "正在写入后端模块配置...")
+                updateStartupProgress(0.16f, "正在复制 RKF 后端模块...")
+                val backendFile = copyAssetModuleToFiles("RKF.zip", "RKF.zip")
+                updateStartupProgress(0.42f, "正在安装 RKF 后端模块...")
+                installRootModule(backendFile, "RKF 后端模块")
+                updateStartupProgress(0.62f, "正在复制 ${metaModule.displayName}...")
+                val metaFile = copyAssetModuleToFiles(metaModule.assetPath, metaModule.fileName)
+                updateStartupProgress(0.78f, "正在安装 ${metaModule.displayName}...")
+                installRootModule(metaFile, metaModule.displayName)
+                updateStartupProgress(0.9f, "正在写入后端模块配置...")
                 Shell.cmd("mkdir -p /data/adb/modules/RKF/config").exec()
                 Shell.cmd("touch /data/adb/modules/RKF/config/avb_disable").exec()
                 Shell.cmd("touch /data/adb/modules/RKF/config/avb_hide").exec()
                 withContext(Dispatchers.Main) {
                     startupIsInstallingModule.value = false
+                    startupSelectedMetaModule.value = null
                     finishFirstRunStartup()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
                     startupIsInstallingModule.value = false
+                    startupSelectedMetaModule.value = null
                     startupFirstRunModuleChoice.value = true
                     startupStatusText.value = "后端模块安装失败: ${e.message}"
                     startupProgress.floatValue = 1f
                 }
             }
+        }
+    }
+
+    private fun copyAssetModuleToFiles(assetPath: String, outputName: String): File {
+        val out = File(filesDir, outputName)
+        assets.open(assetPath).use { input ->
+            out.outputStream().use { output -> input.copyTo(output) }
+        }
+        return out
+    }
+
+    private fun installRootModule(file: File, displayName: String) {
+        try {
+            val command = detectModuleInstallCommand(file)
+                ?: throw IllegalStateException("无法识别 Root 管理器")
+            val result = Shell.cmd(command).exec()
+            if (!result.isSuccess) {
+                val message = (result.err + result.out).joinToString("\n").ifBlank { "$displayName 安装失败" }
+                throw IllegalStateException(message)
+            }
+        } finally {
+            file.delete()
         }
     }
 
