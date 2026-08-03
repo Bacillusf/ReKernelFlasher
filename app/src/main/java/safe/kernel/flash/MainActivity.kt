@@ -153,6 +153,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private var rootServiceConnected: Boolean = false
+    private var backendInitializationStarted: Boolean = false
+    private var openMainWhenBackendReady: Boolean = true
+    private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
     private lateinit var mainListener: MainListener
     var isAwaitingResult = false
@@ -227,10 +230,23 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        startBackendInitialization(showLoading = true)
+        startBackendInitialization(showLoading = true, openMainWhenReady = true)
     }
 
-    private fun startBackendInitialization(showLoading: Boolean) {
+    private fun startBackendInitialization(showLoading: Boolean, openMainWhenReady: Boolean) {
+        readyFileSystemManager?.let { readyManager ->
+            if (openMainWhenReady) {
+                fadeToContent { showMainContent(readyManager) }
+            }
+            return
+        }
+
+        openMainWhenBackendReady = openMainWhenBackendReady || openMainWhenReady
+        if (backendInitializationStarted) {
+            return
+        }
+        backendInitializationStarted = true
+
         if (showLoading) {
             showStartupLoading()
         }
@@ -244,15 +260,28 @@ class MainActivity : ComponentActivity() {
                         val intent = Intent(this@MainActivity, FilesystemService::class.java)
                         RootService.bind(intent, AidlConnection())
                     } else {
+                        backendInitializationStarted = false
                         showRootRequiredWizard()
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
+                    backendInitializationStarted = false
                     showStartupError(e.message ?: getString(R.string.root_required))
                 }
             }
+        }
+    }
+
+    private fun completeFirstRunWizard() {
+        openMainWhenBackendReady = true
+        readyFileSystemManager?.let { readyManager ->
+            fadeToContent { showMainContent(readyManager) }
+            return
+        }
+        if (!backendInitializationStarted) {
+            startBackendInitialization(showLoading = false, openMainWhenReady = true)
         }
     }
 
@@ -322,7 +351,10 @@ class MainActivity : ComponentActivity() {
                     composable("wizard") {
                         WizardScreen(
                             navController = navController,
-                            onComplete = { startBackendInitialization(showLoading = false) }
+                            onDependenciesReady = {
+                                startBackendInitialization(showLoading = false, openMainWhenReady = false)
+                            },
+                            onComplete = { completeFirstRunWizard() }
                         )
                     }
                     composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
@@ -409,7 +441,10 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
             withContext(Dispatchers.Main) {
-                showMainContent(fileSystemManager)
+                readyFileSystemManager = fileSystemManager
+                if (openMainWhenBackendReady) {
+                    fadeToContent { showMainContent(fileSystemManager) }
+                }
             }
         }
     }
@@ -432,8 +467,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showMainContent(fileSystemManager: FileSystemManager) {
-        fadeToContent {
-            setContent {
+        setContent {
             val navController = rememberNavController()
             viewModel = viewModel {
                 val application = checkNotNull(get(ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY))
@@ -985,7 +1019,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
         }
     }
 

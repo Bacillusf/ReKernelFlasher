@@ -76,7 +76,11 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun WizardScreen(navController: NavController, onComplete: (() -> Unit)? = null) {
+fun WizardScreen(
+    navController: NavController,
+    onDependenciesReady: (() -> Unit)? = null,
+    onComplete: (() -> Unit)? = null
+) {
     var step by remember { mutableIntStateOf(1) }
     val context = LocalContext.current
 
@@ -103,7 +107,11 @@ fun WizardScreen(navController: NavController, onComplete: (() -> Unit)? = null)
             ) {
                 when (currentStep) {
                     1 -> WizardStep1(onNext = { step = 2 })
-                    2 -> WizardStep2(context, onNext = { step = 3 })
+                    2 -> WizardStep2(
+                        context = context,
+                        onDependenciesReady = onDependenciesReady,
+                        onNext = { step = 3 }
+                    )
                     3 -> WizardStep3(
                         context,
                         onNext = { step = 4 },
@@ -200,7 +208,11 @@ private fun WizardStep1(onNext: () -> Unit) {
 }
 
 @Composable
-private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
+private fun WizardStep2(
+    context: android.content.Context,
+    onDependenciesReady: (() -> Unit)?,
+    onNext: () -> Unit
+) {
     val isDark = isSystemInDarkTheme()
     val textColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
     val subColor = if (isDark) Color(0xFFBBBBBB) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -214,6 +226,7 @@ private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
     var rootManager by remember { mutableStateOf<String?>(null) }
     var hasBackendPackage by remember { mutableStateOf(false) }
     var hasWorkDir by remember { mutableStateOf(false) }
+    var dependenciesReadyDispatched by remember { mutableStateOf(false) }
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = tween(durationMillis = 260),
@@ -270,6 +283,10 @@ private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
                 statusText = "依赖检测完成"
                 progress = 1f
                 checkDone = true
+                if (!dependenciesReadyDispatched) {
+                    dependenciesReadyDispatched = true
+                    onDependenciesReady?.invoke()
+                }
             }
         } catch (e: Exception) {
             checkError = "依赖检测失败: ${e.message}"
@@ -375,6 +392,7 @@ private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
                 checkError = null
                 statusText = "正在检测依赖"
                 progress = 0.08f
+                dependenciesReadyDispatched = false
                 checkTrigger++
             },
             modifier = Modifier.fillMaxWidth(),
