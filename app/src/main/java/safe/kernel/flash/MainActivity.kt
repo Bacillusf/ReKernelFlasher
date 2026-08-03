@@ -30,6 +30,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -51,10 +53,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -164,6 +168,9 @@ class MainActivity : ComponentActivity() {
     private val startupProgress = mutableFloatStateOf(0.08f)
     private val startupStatusText = mutableStateOf("正在检测依赖")
     private val backendReadyCallbacks = mutableListOf<(Boolean) -> Unit>()
+    private val startupCanRetry = mutableStateOf(false)
+    private val startupFirstRunModuleChoice = mutableStateOf(false)
+    private val startupIsInstallingModule = mutableStateOf(false)
     private var backendInitializationFailed: String? = null
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
@@ -236,13 +243,8 @@ class MainActivity : ComponentActivity() {
 
         val wizardDone = getSharedPreferences("wizard", 0)
             .getInt("version", 0) >= BuildConfig.VERSION_CODE
-        if (!wizardDone) {
-            openMainWhenBackendReady = false
-            showRootRequiredWizard()
-            return
-        }
-
-        startBackendInitialization(showLoading = true, openMainWhenReady = true)
+        showLauncherStartup(firstRun = !wizardDone)
+        runLauncherStartupChecks(firstRun = !wizardDone)
     }
 
     private fun updateStartupProgress(progress: Float, status: String) {
@@ -343,25 +345,41 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showStartupLoading() {
+        showLauncherStartup(firstRun = false)
+    }
+
+
+    private fun showLauncherStartup(firstRun: Boolean) {
         setContent {
             KernelFlasherTheme {
-                val pulse = rememberInfiniteTransition(label = "startupPulse")
-                val iconScale by pulse.animateFloat(
+                val pulse = rememberInfiniteTransition(label = "launcherStartupPulse")
+                val titleScale by pulse.animateFloat(
                     initialValue = 0.96f,
-                    targetValue = 1.04f,
+                    targetValue = 1.0f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                        animation = tween(durationMillis = 620, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse
                     ),
-                    label = "startupIconScale"
+                    label = "launcherStartupTitleScale"
                 )
-
+                val dotPulse by pulse.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 4f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 1040, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "launcherStartupDots"
+                )
                 val loadingProgress by startupProgress
                 val loadingStatus by startupStatusText
+                val canRetry by startupCanRetry
+                val showModuleChoice by startupFirstRunModuleChoice
+                val installingModule by startupIsInstallingModule
                 val animatedLoadingProgress by animateFloatAsState(
                     targetValue = loadingProgress,
                     animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
-                    label = "startupLoadingProgress"
+                    label = "launcherStartupProgress"
                 )
 
                 Box(
@@ -373,40 +391,198 @@ class MainActivity : ComponentActivity() {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 40.dp)
+                        modifier = Modifier.padding(horizontal = 30.dp)
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_splash_foreground),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(86.dp)
-                                .scale(iconScale)
-                        )
-                        Spacer(Modifier.height(18.dp))
                         Text(
                             text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.displaySmall,
                             color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.scale(titleScale)
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
-                            text = loadingStatus,
+                            text = if (firstRun) "Root · Backend Module · Flash Tools" else "Root · Backend · Flash Tools",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(Modifier.height(22.dp))
+                        Spacer(Modifier.height(24.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            repeat(4) { index ->
+                                val active = index == dotPulse.toInt().coerceIn(0, 3)
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (active) 40.dp else 28.dp, 7.dp)
+                                        .background(
+                                            if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                            RoundedCornerShape(20.dp)
+                                        )
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            text = loadingStatus,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(16.dp))
                         LinearProgressIndicator(
                             progress = { animatedLoadingProgress.coerceIn(0f, 1f) },
                             modifier = Modifier.fillMaxWidth(0.62f),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
                         )
+                        if (canRetry || showModuleChoice) {
+                            Spacer(Modifier.height(18.dp))
+                        }
+                        if (canRetry) {
+                            Button(onClick = { runLauncherStartupChecks(firstRun) }) {
+                                Text("重试")
+                            }
+                        } else if (showModuleChoice) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(
+                                    enabled = !installingModule,
+                                    onClick = { installFirstRunBackendModule() }
+                                ) {
+                                    Text(if (installingModule) "安装中" else "安装后端模块")
+                                }
+                                OutlinedButton(
+                                    enabled = !installingModule,
+                                    onClick = { finishFirstRunStartup() }
+                                ) {
+                                    Text("跳过安装")
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun runLauncherStartupChecks(firstRun: Boolean) {
+        startupCanRetry.value = false
+        startupFirstRunModuleChoice.value = false
+        startupIsInstallingModule.value = false
+        startupProgress.floatValue = 0.08f
+        startupStatusText.value = "正在检查 Root 权限和后端依赖..."
+        openMainWhenBackendReady = false
+        lifecycleScope.launch {
+            try {
+                updateStartupProgress(0.18f, "正在请求 Root 权限...")
+                val rootGranted = withContext(Dispatchers.IO) {
+                    Shell.getShell()
+                    var granted = false
+                    for (attempt in 0 until 8) {
+                        granted = Shell.isAppGrantedRoot() == true
+                        if (granted) break
+                        Thread.sleep(250)
+                    }
+                    granted
+                }
+                if (!rootGranted) {
+                    startupStatusText.value = "Root 权限不可用，请授权后重试。"
+                    startupProgress.floatValue = 0f
+                    startupCanRetry.value = true
+                    return@launch
+                }
+
+                updateStartupProgress(0.36f, "Root 已授权，正在连接后端服务...")
+                val backendReady = prepareBackendBeforeWizardContinue()
+                if (!backendReady || readyFileSystemManager == null) {
+                    startupStatusText.value = backendInitializationFailed ?: "后端初始化失败，请重试。"
+                    startupProgress.floatValue = 0f
+                    startupCanRetry.value = true
+                    return@launch
+                }
+
+                startupProgress.floatValue = 1f
+                startupStatusText.value = if (firstRun) "初始化完成，请选择是否安装后端模块。" else "检查通过，正在进入..."
+                if (firstRun) {
+                    startupFirstRunModuleChoice.value = true
+                } else {
+                    readyFileSystemManager?.let { readyManager ->
+                        fadeToContent { showMainContent(readyManager) }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, e.message, e)
+                startupStatusText.value = e.message ?: "检查失败，请重试。"
+                startupProgress.floatValue = 0f
+                startupCanRetry.value = true
+            }
+        }
+    }
+
+    private fun installFirstRunBackendModule() {
+        startupIsInstallingModule.value = true
+        startupFirstRunModuleChoice.value = false
+        startupCanRetry.value = false
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                updateStartupProgress(0.16f, "正在复制后端模块...")
+                val tmpFile = File(filesDir, "RKF.zip")
+                assets.open("RKF.zip").use { input ->
+                    tmpFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                updateStartupProgress(0.52f, "正在安装后端模块...")
+                val command = detectModuleInstallCommand(tmpFile)
+                    ?: throw IllegalStateException("无法识别 Root 管理器")
+                val result = Shell.cmd(command).exec()
+                tmpFile.delete()
+                if (!result.isSuccess) {
+                    val message = (result.err + result.out).joinToString("\n").ifBlank { "后端模块安装失败" }
+                    throw IllegalStateException(message)
+                }
+                updateStartupProgress(0.82f, "正在写入后端模块配置...")
+                Shell.cmd("mkdir -p /data/adb/modules/RKF/config").exec()
+                Shell.cmd("touch /data/adb/modules/RKF/config/avb_disable").exec()
+                Shell.cmd("touch /data/adb/modules/RKF/config/avb_hide").exec()
+                withContext(Dispatchers.Main) {
+                    startupIsInstallingModule.value = false
+                    finishFirstRunStartup()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, e.message, e)
+                withContext(Dispatchers.Main) {
+                    startupIsInstallingModule.value = false
+                    startupFirstRunModuleChoice.value = true
+                    startupStatusText.value = "后端模块安装失败: ${e.message}"
+                    startupProgress.floatValue = 1f
+                }
+            }
+        }
+    }
+
+    private fun detectModuleInstallCommand(file: File): String? {
+        val path = file.absolutePath
+        val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+        return when {
+            isKsu -> "/data/adb/ksud module install $path"
+            isApatch -> "/data/adb/apd module install $path"
+            isMagisk -> "/data/adb/magisk/magisk --install-module $path"
+            else -> null
+        }
+    }
+
+    private fun finishFirstRunStartup() {
+        getSharedPreferences("wizard", 0)
+            .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
+        startupProgress.floatValue = 1f
+        startupStatusText.value = "检查通过，正在进入..."
+        startupFirstRunModuleChoice.value = false
+        readyFileSystemManager?.let { readyManager ->
+            fadeToContent { showMainContent(readyManager) }
+        } ?: runLauncherStartupChecks(firstRun = false)
     }
 
     private fun showRootRequiredWizard() {
