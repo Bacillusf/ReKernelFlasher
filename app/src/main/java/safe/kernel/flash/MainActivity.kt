@@ -156,7 +156,6 @@ class MainActivity : ComponentActivity() {
 
     private var rootServiceConnected: Boolean = false
     private var backendInitializationStarted: Boolean = false
-    private var backendToolsPreparationStarted: Boolean = false
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
@@ -427,36 +426,39 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            readyFileSystemManager = fileSystemManager
-            if (openMainWhenBackendReady) {
-                fadeToContent { showMainContent(fileSystemManager) }
-            }
-        }
-        prepareBackendTools()
-    }
-
-    private fun prepareBackendTools() {
-        if (backendToolsPreparationStarted) return
-        backendToolsPreparationStarted = true
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                Shell.cmd("cd $filesDir").exec()
-                copyNativeBinary("lptools_static") // v20220825
-                copyNativeBinary("httools_static") // v3.2.0
-                copyNativeBinary("magiskboot") // v29.0
-                copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
-                copyNativeBinary("busybox") // BusyBox v1.36.1.1
-                copyAsset("mkbootfs")
-                copyAsset("ksuinit")
-                copyAsset("payload-dumper-go")
-                copyAsset("flash_ak3.sh")
-                copyAsset("flash_ak3_mkbootfs.sh")
+                prepareBackendToolsBlocking()
             } catch (e: Exception) {
-                backendToolsPreparationStarted = false
                 Log.e(TAG, e.message, e)
+                withContext(Dispatchers.Main) {
+                    if (openMainWhenBackendReady) {
+                        showStartupError(e.message ?: getString(R.string.root_required))
+                    }
+                }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                readyFileSystemManager = fileSystemManager
+                if (openMainWhenBackendReady) {
+                    fadeToContent { showMainContent(fileSystemManager) }
+                }
             }
         }
+    }
+
+    private fun prepareBackendToolsBlocking() {
+        Shell.cmd("cd $filesDir").exec()
+        copyNativeBinary("lptools_static") // v20220825
+        copyNativeBinary("httools_static") // v3.2.0
+        copyNativeBinary("magiskboot") // v29.0
+        copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+        copyNativeBinary("busybox") // BusyBox v1.36.1.1
+        copyAsset("mkbootfs")
+        copyAsset("ksuinit")
+        copyAsset("payload-dumper-go")
+        copyAsset("flash_ak3.sh")
+        copyAsset("flash_ak3_mkbootfs.sh")
     }
 
     private fun fadeToContent(render: () -> Unit) {
