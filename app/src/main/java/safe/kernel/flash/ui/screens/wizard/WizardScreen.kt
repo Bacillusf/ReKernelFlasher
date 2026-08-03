@@ -21,6 +21,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
@@ -39,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,9 +69,12 @@ import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import safe.kernel.flash.BuildConfig
 import safe.kernel.flash.ui.theme.softShadow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun WizardScreen(navController: NavController) {
     var step by remember { mutableIntStateOf(1) }
@@ -79,29 +90,42 @@ fun WizardScreen(navController: NavController) {
     ) {
         Spacer(Modifier.height(32.dp))
 
-        when (step) {
-            1 -> WizardStep1(onNext = { step = 2 })
-            2 -> WizardStep2(context, onNext = { step = 3 })
-            3 -> WizardStep3(
-                context,
-                onNext = { step = 4 },
-                onSkip = {
-                    context.getSharedPreferences("wizard", 0)
-                        .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
-                    navController.navigate("main") {
-                        popUpTo("wizard") { inclusive = true }
-                    }
+        AnimatedContent(
+            targetState = step,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(140))
+            },
+            label = "wizardStep"
+        ) { currentStep ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                when (currentStep) {
+                    1 -> WizardStep1(onNext = { step = 2 })
+                    2 -> WizardStep2(context, onNext = { step = 3 })
+                    3 -> WizardStep3(
+                        context,
+                        onNext = { step = 4 },
+                        onSkip = {
+                            context.getSharedPreferences("wizard", 0)
+                                .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
+                            navController.navigate("main") {
+                                popUpTo("wizard") { inclusive = true }
+                            }
+                        }
+                    )
+                    4 -> WizardStep4(
+                        onStart = {
+                            context.getSharedPreferences("wizard", 0)
+                                .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
+                            navController.navigate("main") {
+                                popUpTo("wizard") { inclusive = true }
+                            }
+                        }
+                    )
                 }
-            )
-            4 -> WizardStep4(
-                onStart = {
-                    context.getSharedPreferences("wizard", 0)
-                        .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
-                    navController.navigate("main") {
-                        popUpTo("wizard") { inclusive = true }
-                    }
-                }
-            )
+            }
         }
 
         Spacer(Modifier.height(32.dp))
@@ -171,85 +195,184 @@ private fun WizardStep1(onNext: () -> Unit) {
 private fun WizardStep2(context: android.content.Context, onNext: () -> Unit) {
     val isDark = isSystemInDarkTheme()
     val textColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
-    var checking by remember { mutableStateOf(false) }
-    var rootType by remember { mutableStateOf<String?>(null) }
-    var hasRoot by remember { mutableStateOf<Boolean?>(null) }
+    val subColor = if (isDark) Color(0xFFBBBBBB) else MaterialTheme.colorScheme.onSurfaceVariant
+    val accentColor = if (isDark) Color(0xFF81C995) else MaterialTheme.colorScheme.primary
+    var checking by remember { mutableStateOf(true) }
+    var checkDone by remember { mutableStateOf(false) }
+    var checkError by remember { mutableStateOf<String?>(null) }
+    var statusText by remember { mutableStateOf("正在检测依赖") }
+    var progress by remember { mutableStateOf(0.08f) }
+    var checkTrigger by remember { mutableIntStateOf(0) }
+    var rootManager by remember { mutableStateOf<String?>(null) }
+    var hasBackendPackage by remember { mutableStateOf(false) }
+    var hasWorkDir by remember { mutableStateOf(false) }
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 260),
+        label = "dependencyProgress"
+    )
+
+    LaunchedEffect(checkTrigger) {
+        checking = true
+        checkDone = false
+        checkError = null
+        try {
+            statusText = "正在确认 Root 授权"
+            progress = 0.22f
+            val rootGranted = withContext(Dispatchers.IO) { Shell.isAppGrantedRoot() == true }
+            delay(120)
+
+            statusText = "正在识别 Root 管理器"
+            progress = 0.45f
+            val detectedRoot = withContext(Dispatchers.IO) {
+                val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
+                when {
+                    isKsu -> "KernelSU"
+                    isApatch -> "APatch"
+                    isMagisk -> "Magisk"
+                    else -> null
+                }
+            }
+            rootManager = detectedRoot
+            delay(120)
+
+            statusText = "正在检查后端模块包"
+            progress = 0.68f
+            hasBackendPackage = withContext(Dispatchers.IO) {
+                runCatching { context.assets.open("RKF.zip").use { true } }.getOrDefault(false)
+            }
+            delay(120)
+
+            statusText = "正在检查本地工作目录"
+            progress = 0.86f
+            hasWorkDir = withContext(Dispatchers.IO) { context.filesDir.exists() && context.filesDir.canWrite() }
+            delay(120)
+
+            if (!rootGranted) {
+                checkError = "未获得 Root 授权，请先在 Root 管理器中允许本应用。"
+            } else if (detectedRoot == null) {
+                checkError = "未识别到 KernelSU、APatch 或 Magisk 管理器。"
+            } else if (!hasBackendPackage) {
+                checkError = "未找到内置后端模块包 RKF.zip。"
+            } else if (!hasWorkDir) {
+                checkError = "本地工作目录不可写。"
+            } else {
+                statusText = "依赖检测完成"
+                progress = 1f
+                checkDone = true
+            }
+        } catch (e: Exception) {
+            checkError = "依赖检测失败: ${e.message}"
+        }
+        checking = false
+    }
 
     Icon(
         Icons.Filled.Star, contentDescription = null,
         modifier = Modifier.size(72.dp),
-        tint = if (isDark) Color(0xFF81C995) else MaterialTheme.colorScheme.primary
+        tint = accentColor
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Root 权限检查",
+        "依赖检测",
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold,
         color = textColor
     )
     Spacer(Modifier.height(16.dp))
 
-    if (!checking && hasRoot == null) {
-        Button(
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth().softShadow(cornerRadius = 20.dp, alpha = 0.06f, offsetY = 2.dp)
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text(
+                "正在检查刷写所需的基础依赖。",
+                style = MaterialTheme.typography.bodyLarge,
+                color = textColor
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "• Root 授权状态\n" +
+                "• Root 管理器类型\n" +
+                "• 内置后端模块包\n" +
+                "• 本地工作目录权限",
+                style = MaterialTheme.typography.bodyMedium,
+                color = subColor,
+                lineHeight = 22.sp
+            )
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (checkError == null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = if (checkError == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = checkError ?: statusText,
+                fontWeight = FontWeight.SemiBold,
+                color = if (checkError == null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(12.dp))
+            LinearProgressIndicator(
+                progress = { animatedProgress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+                color = if (checkError == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
+            )
+        }
+    }
+
+    if (checkDone) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "${rootManager ?: "Root"} 已就绪，后端模块包已找到。",
+            style = MaterialTheme.typography.bodySmall,
+            color = subColor,
+            textAlign = TextAlign.Center
+        )
+    }
+
+    Spacer(Modifier.height(8.dp))
+    Button(
+        onClick = onNext,
+        enabled = checkDone && !checking,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(vertical = 14.dp)
+    ) { Text("下一步", style = MaterialTheme.typography.titleMedium) }
+
+    if (checkError != null) {
+        OutlinedButton(
             onClick = {
                 checking = true
-                val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
-                val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
-                val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
-                checking = false
-                rootType = when {
-                    isKsu -> "KernelSU"
-                    isApatch -> "APatch"
-                    isMagisk -> "Magisk"
-                    else -> null
-                }
-                hasRoot = rootType != null || Shell.isAppGrantedRoot() == true
+                checkDone = false
+                checkError = null
+                statusText = "正在检测依赖"
+                progress = 0.08f
+                checkTrigger++
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
             contentPadding = PaddingValues(vertical = 14.dp)
-        ) { Text("开始检查", style = MaterialTheme.typography.titleMedium) }
-    }
-
-    if (checking) {
-        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp))
-        Text("正在检查...", color = if (isDark) Color(0xFFBBBBBB) else MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-
-    if (hasRoot == true && rootType != null) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
-                Spacer(Modifier.height(4.dp))
-                Text("$rootType Root 授权成功", fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = onNext,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            contentPadding = PaddingValues(vertical = 14.dp)
-        ) { Text("下一步", style = MaterialTheme.typography.titleMedium) }
-    }
-
-    if (hasRoot == false) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                "未检测到 Root 权限，请先获取 Root 后再使用本软件。",
-                modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-        }
+        ) { Text("重新检测", style = MaterialTheme.typography.titleMedium) }
     }
 }
 
