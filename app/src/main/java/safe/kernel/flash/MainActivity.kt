@@ -26,7 +26,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +35,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -57,13 +58,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -134,7 +134,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import kotlin.math.abs
 import kotlin.system.exitProcess
 
 object SharedViewModels {
@@ -184,6 +183,7 @@ class MainActivity : ComponentActivity() {
 
     private fun copyAsset(filename: String) {
         val dest = File(filesDir, filename)
+        if (dest.exists() && dest.length() > 0L) return
         assets.open(filename).use { inputStream ->
             dest.outputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -194,9 +194,8 @@ class MainActivity : ComponentActivity() {
 
     private fun copyNativeBinary(filename: String) {
         val binary = File(applicationInfo.nativeLibraryDir, "lib$filename.so")
-        println("binary: $binary")
         val dest = File(filesDir, filename)
-        println("dest: $dest")
+        if (dest.exists() && dest.length() == binary.length()) return
         binary.inputStream().use { inputStream ->
             dest.outputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
@@ -558,7 +557,12 @@ class MainActivity : ComponentActivity() {
                         NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
                     )
                     val isTabRoute = currentRoute in tabRoutes
-                    var tabSwipeOffset by remember { mutableFloatStateOf(0f) }
+                    val selectedTabIndex = tabRoutes.indexOf(currentRoute).coerceAtLeast(0)
+                    val pagerState = rememberPagerState(
+                        initialPage = selectedTabIndex,
+                        pageCount = { tabRoutes.size }
+                    )
+                    val pagerScope = rememberCoroutineScope()
                     fun navigateToTab(route: String) {
                         navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -566,11 +570,16 @@ class MainActivity : ComponentActivity() {
                             restoreState = true
                         }
                     }
-                    fun navigateBySwipe(offset: Float) {
-                        val currentIndex = tabRoutes.indexOf(currentRoute)
-                        if (currentIndex < 0 || abs(offset) < 96f) return
-                        val targetIndex = if (offset < 0f) currentIndex + 1 else currentIndex - 1
-                        tabRoutes.getOrNull(targetIndex)?.let(::navigateToTab)
+                    LaunchedEffect(isTabRoute, selectedTabIndex) {
+                        if (isTabRoute && pagerState.currentPage != selectedTabIndex) {
+                            pagerState.animateScrollToPage(selectedTabIndex)
+                        }
+                    }
+                    LaunchedEffect(isTabRoute, pagerState.settledPage) {
+                        if (isTabRoute) {
+                            val settledRoute = tabRoutes[pagerState.settledPage]
+                            if (currentRoute != settledRoute) navigateToTab(settledRoute)
+                        }
                     }
 
                     val dpiScale = mainViewModel.dpiScale
@@ -716,70 +725,69 @@ class MainActivity : ComponentActivity() {
                             drawContent()
                         }
                         Column(Modifier.fillMaxSize()) {
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .pointerInput(isTabRoute, currentRoute) {
-                                        if (!isTabRoute) return@pointerInput
-                                        detectHorizontalDragGestures(
-                                            onDragStart = { tabSwipeOffset = 0f },
-                                            onHorizontalDrag = { change, dragAmount ->
-                                                tabSwipeOffset += dragAmount
-                                                change.consume()
-                                            },
-                                            onDragEnd = {
-                                                navigateBySwipe(tabSwipeOffset)
-                                                tabSwipeOffset = 0f
-                                            },
-                                            onDragCancel = { tabSwipeOffset = 0f }
-                                        )
+                            Box(Modifier.weight(1f)) {
+                                if (isTabRoute) {
+                                    HorizontalPager(
+                                        state = pagerState,
+                                        beyondViewportPageCount = 3,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .layerBackdrop(floatingNavBackdrop)
+                                    ) { page ->
+                                        when (page) {
+                                            0 -> {
+                                                val showRebootMenu = remember { mutableStateOf(false) }
+                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
+                                                    Box {
+                                                        IconButton(onClick = { showRebootMenu.value = true }) {
+                                                            Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
+                                                        }
+                                                        DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
+                                                        }
+                                                    }
+                                                }) {
+                                                    MainContent(mainViewModel, navController)
+                                                }
+                                            }
+                                            1 -> RefreshableScreen(
+                                                mainViewModel, navController,
+                                                actions = {
+                                                    IconButton(onClick = { navController.navigate("repo") }) {
+                                                        Icon(
+                                                            Icons.Filled.Cloud,
+                                                            contentDescription = "GKI/OKI 仓库",
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            ) {
+                                                FlashHomeContent(mainViewModel, navController)
+                                            }
+                                            2 -> {
+                                                LaunchedEffect(Unit) { backupsViewModel.clearCurrent() }
+                                                RefreshableScreen(mainViewModel, navController) {
+                                                    BackupsContent(backupsViewModel, navController)
+                                                }
+                                            }
+                                            3 -> RefreshableScreen(mainViewModel, navController) {
+                                                SettingsContent(mainViewModel, navController)
+                                            }
+                                        }
                                     }
-                            ) {
+                                }
                                 NavHost(
                                     navController = navController,
                                     startDestination = startDest,
-                                    modifier = Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
+                                    modifier = if (isTabRoute) Modifier.size(0.dp) else Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
                                 ) {
-                                    composable("main") {
-                                        val showRebootMenu = remember { mutableStateOf(false) }
-                                        RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
-                                            Box {
-                                                IconButton(onClick = { showRebootMenu.value = true }) {
-                                                    Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
-                                                }
-                                                DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
-                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
-                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
-                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
-                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
-                                                    DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
-                                                }
-                                            }
-                                        }) {
-                                            MainContent(mainViewModel, navController)
-                                        }
-                                    }
-                                    composable("flash") {
-                                        RefreshableScreen(
-                                            mainViewModel, navController,
-                                            actions = {
-                                                IconButton(onClick = { navController.navigate("repo") }) {
-                                                    Icon(
-                                                        Icons.Filled.Cloud,
-                                                        contentDescription = "GKI/OKI 仓库",
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                        ) {
-                                            FlashHomeContent(mainViewModel, navController)
-                                        }
-                                    }
-                                    composable("settings") {
-                                        RefreshableScreen(mainViewModel, navController) {
-                                            SettingsContent(mainViewModel, navController)
-                                        }
-                                    }
+                                    composable("main") { Box(Modifier.fillMaxSize()) }
+                                    composable("flash") { Box(Modifier.fillMaxSize()) }
+                                    composable("settings") { Box(Modifier.fillMaxSize()) }
                         if (mainViewModel.isAb) {
                             composable("slot_a", content = slotContentA)
                             composable("slot_a/flash", content = slotFlashContentA)
@@ -820,12 +828,7 @@ class MainActivity : ComponentActivity() {
                             composable("slot/backups/{backupId}/restore/restore", content = slotBackupsContent)
                             composable("slot/backups/{backupId}/flash/ak3", content = slotBackupFlashContent)
                         }
-                        composable("backups") {
-                            backupsViewModel.clearCurrent()
-                            RefreshableScreen(mainViewModel, navController) {
-                                BackupsContent(backupsViewModel, navController)
-                            }
-                        }
+                        composable("backups") { Box(Modifier.fillMaxSize()) }
                         composable("backups/{backupId}") { backStackEntry ->
                             backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                             if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
@@ -955,7 +958,14 @@ class MainActivity : ComponentActivity() {
                                         items = tabNavItems,
                                         currentRoute = currentRoute,
                                         backdrop = floatingNavBackdrop,
-                                        onItemClick = { item -> navigateToTab(item.route) }
+                                        onItemClick = { item ->
+                                            val targetPage = tabRoutes.indexOf(item.route)
+                                            if (targetPage >= 0) {
+                                                pagerScope.launch { pagerState.animateScrollToPage(targetPage) }
+                                            } else {
+                                                navigateToTab(item.route)
+                                            }
+                                        }
                                     )
                                 }
                             }
