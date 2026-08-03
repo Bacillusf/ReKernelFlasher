@@ -27,6 +27,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,9 +38,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
@@ -70,6 +68,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -840,16 +839,19 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val tabRoutes = listOf("main", "flash", "backups", "settings")
-                    val tabIndex = tabRoutes.indexOf(currentRoute).coerceAtLeast(0)
-                    val isTabRoute = currentRoute in tabRoutes
-                    val pagerState = rememberPagerState(initialPage = tabIndex) { tabRoutes.size }
-                    val pagerScope = rememberCoroutineScope()
+                    val tabIndex = tabRoutes.indexOf(currentRoute)
+                    val isTabRoute = tabIndex >= 0
                     fun navigateToTab(route: String) {
                         navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
+                    }
+                    fun navigateAdjacentTab(direction: Int) {
+                        if (tabIndex < 0) return
+                        val nextIndex = (tabIndex + direction).coerceIn(0, tabRoutes.lastIndex)
+                        if (nextIndex != tabIndex) navigateToTab(tabRoutes[nextIndex])
                     }
 
                     val dpiScale = mainViewModel.dpiScale
@@ -994,31 +996,38 @@ class MainActivity : ComponentActivity() {
                             drawRect(floatingNavBackground)
                             drawContent()
                         }
-                        @Composable
-                        fun MainTabPager() {
-                            LaunchedEffect(tabIndex, isTabRoute) {
-                                if (isTabRoute && pagerState.currentPage != tabIndex) {
-                                    pagerState.animateScrollToPage(tabIndex)
-                                }
+                        val tabSwipeModifier = if (isTabRoute) {
+                            Modifier.pointerInput(currentRoute) {
+                                var dragTotal = 0f
+                                val threshold = 96.dp.toPx()
+                                detectHorizontalDragGestures(
+                                    onDragStart = { dragTotal = 0f },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        dragTotal += dragAmount
+                                        if (kotlin.math.abs(dragTotal) >= threshold) {
+                                            change.consume()
+                                            navigateAdjacentTab(if (dragTotal < 0f) 1 else -1)
+                                            dragTotal = 0f
+                                        }
+                                    },
+                                    onDragEnd = { dragTotal = 0f },
+                                    onDragCancel = { dragTotal = 0f },
+                                )
                             }
-                            LaunchedEffect(pagerState.settledPage, isTabRoute) {
-                                if (isTabRoute) {
-                                    val targetRoute = tabRoutes[pagerState.settledPage]
-                                    if (targetRoute != currentRoute) {
-                                        navigateToTab(targetRoute)
-                                    }
-                                }
-                            }
-                            HorizontalPager(
-                                state = pagerState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .layerBackdrop(floatingNavBackdrop),
-                                beyondViewportPageCount = 1,
-                                key = { page -> tabRoutes[page] }
-                            ) { page ->
-                                when (tabRoutes[page]) {
-                                    "main" -> {
+                        } else {
+                            Modifier
+                        }
+                        Column(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = startDest,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .layerBackdrop(floatingNavBackdrop)
+                                        .then(tabSwipeModifier)
+                                ) {
+                                    composable("main") {
                                         val showRebootMenu = remember { mutableStateOf(false) }
                                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true, bottomContentPadding = 120.dp, actions = {
                                             Box {
@@ -1037,7 +1046,7 @@ class MainActivity : ComponentActivity() {
                                             MainContent(mainViewModel, navController)
                                         }
                                     }
-                                    "flash" -> {
+                                    composable("flash") {
                                         RefreshableScreen(
                                             mainViewModel,
                                             navController,
@@ -1055,37 +1064,10 @@ class MainActivity : ComponentActivity() {
                                             FlashHomeContent(mainViewModel, navController)
                                         }
                                     }
-                                    "backups" -> {
-                                        LaunchedEffect(Unit) { backupsViewModel.clearCurrent() }
-                                        RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
-                                            BackupsContent(backupsViewModel, navController)
-                                        }
-                                    }
-                                    "settings" -> {
+                                    composable("settings") {
                                         RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
                                             SettingsContent(mainViewModel, navController)
                                         }
-                                    }
-                                }
-                            }
-                        }
-                        Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) {
-                                NavHost(
-                                    navController = navController,
-                                    startDestination = startDest,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .layerBackdrop(floatingNavBackdrop)
-                                ) {
-                                    composable("main") {
-                                        MainTabPager()
-                                    }
-                                    composable("flash") {
-                                        MainTabPager()
-                                    }
-                                    composable("settings") {
-                                        MainTabPager()
                                     }
                         if (mainViewModel.isAb) {
                             composable("slot_a", content = slotContentA)
@@ -1128,8 +1110,11 @@ class MainActivity : ComponentActivity() {
                             composable("slot/backups/{backupId}/flash/ak3", content = slotBackupFlashContent)
                         }
                         composable("backups") {
-                                        MainTabPager()
-                                    }
+                            backupsViewModel.clearCurrent()
+                            RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                BackupsContent(backupsViewModel, navController)
+                            }
+                        }
                         composable("backups/{backupId}") { backStackEntry ->
                             backupsViewModel.currentBackup = backStackEntry.arguments?.getString("backupId")
                             if (backupsViewModel.backups.containsKey(backupsViewModel.currentBackup)) {
@@ -1270,10 +1255,6 @@ class MainActivity : ComponentActivity() {
                                         currentRoute = currentRoute,
                                         backdrop = floatingNavBackdrop,
                                         onItemClick = { item ->
-                                            val targetIndex = tabRoutes.indexOf(item.route)
-                                            if (targetIndex >= 0) {
-                                                pagerScope.launch { pagerState.animateScrollToPage(targetIndex) }
-                                            }
                                             navigateToTab(item.route)
                                         }
                                     )
