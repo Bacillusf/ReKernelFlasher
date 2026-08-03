@@ -42,7 +42,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -704,7 +704,7 @@ class MainActivity : ComponentActivity() {
                                         RefreshableScreen(mainViewModel, navController, swipeEnabled = true, actions = {
                                             Box {
                                                 IconButton(onClick = { showRebootMenu.value = true }) {
-                                                    Icon(Icons.Filled.Refresh, contentDescription = "重启")
+                                                    Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
                                                 }
                                                 DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
                                                     DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
