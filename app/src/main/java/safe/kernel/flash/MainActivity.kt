@@ -322,7 +322,7 @@ class MainActivity : ComponentActivity() {
                     composable("wizard") {
                         WizardScreen(
                             navController = navController,
-                            onComplete = { startBackendInitialization(showLoading = true) }
+                            onComplete = { startBackendInitialization(showLoading = false) }
                         )
                     }
                     composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
@@ -400,7 +400,7 @@ class MainActivity : ComponentActivity() {
                 copyAsset("payload-dumper-go")
                 copyAsset("flash_ak3.sh")
                 copyAsset("flash_ak3_mkbootfs.sh")
-                delay(180)
+                delay(260)
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
@@ -419,13 +419,13 @@ class MainActivity : ComponentActivity() {
         decor.animate().cancel()
         decor.animate()
             .alpha(0f)
-            .setDuration(120L)
+            .setDuration(180L)
             .withEndAction {
                 render()
                 decor.alpha = 0f
                 decor.animate()
                     .alpha(1f)
-                    .setDuration(220L)
+                    .setDuration(320L)
                     .start()
             }
             .start()
