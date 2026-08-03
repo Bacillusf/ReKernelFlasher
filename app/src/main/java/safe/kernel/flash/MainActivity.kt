@@ -18,12 +18,23 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -38,6 +49,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,9 +61,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -111,6 +125,7 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -205,14 +220,27 @@ class MainActivity : ComponentActivity() {
             splashScreenView.remove()
         }
 
-        showStartupPlaceholder()
+        val wizardDone = getSharedPreferences("wizard", 0)
+            .getInt("version", 0) >= BuildConfig.VERSION_CODE
+        if (!wizardDone) {
+            showRootRequiredWizard()
+            return
+        }
 
+        startBackendInitialization(showLoading = true)
+    }
+
+    private fun startBackendInitialization(showLoading: Boolean) {
+        if (showLoading) {
+            showStartupLoading()
+        }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 Shell.getShell()
                 val rootGranted = Shell.isAppGrantedRoot() == true
                 withContext(Dispatchers.Main) {
                     if (rootGranted) {
+                        rootServiceConnected = false
                         val intent = Intent(this@MainActivity, FilesystemService::class.java)
                         RootService.bind(intent, AidlConnection())
                     } else {
@@ -228,14 +256,60 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun showStartupPlaceholder() {
+    private fun showStartupLoading() {
         setContent {
             KernelFlasherTheme {
+                val pulse = rememberInfiniteTransition(label = "startupPulse")
+                val iconScale by pulse.animateFloat(
+                    initialValue = 0.96f,
+                    targetValue = 1.04f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "startupIconScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                )
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 40.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_splash_foreground),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(86.dp)
+                                .scale(iconScale)
+                        )
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "正在检测依赖",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.height(22.dp))
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(0.62f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -245,7 +319,12 @@ class MainActivity : ComponentActivity() {
             KernelFlasherTheme {
                 val navController = rememberNavController()
                 NavHost(navController, startDestination = "wizard") {
-                    composable("wizard") { WizardScreen(navController) }
+                    composable("wizard") {
+                        WizardScreen(
+                            navController = navController,
+                            onComplete = { startBackendInitialization(showLoading = true) }
+                        )
+                    }
                     composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
                 }
             }
@@ -308,27 +387,53 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
-        try {
-            Shell.cmd("cd $filesDir").exec()
-            copyNativeBinary("lptools_static") // v20220825
-            copyNativeBinary("httools_static") // v3.2.0
-            copyNativeBinary("magiskboot") // v29.0
-            copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
-            copyNativeBinary("busybox") // BusyBox v1.36.1.1
-            copyAsset("mkbootfs")
-            copyAsset("ksuinit")
-            copyAsset("payload-dumper-go")
-            copyAsset("flash_ak3.sh")
-            copyAsset("flash_ak3_mkbootfs.sh")
-        } catch (e: Exception) {
-            Log.e(TAG, e.message, e)
-            setContent {
-                KernelFlasherTheme {
-                    ErrorScreen(e.message!!)
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                Shell.cmd("cd $filesDir").exec()
+                copyNativeBinary("lptools_static") // v20220825
+                copyNativeBinary("httools_static") // v3.2.0
+                copyNativeBinary("magiskboot") // v29.0
+                copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+                copyNativeBinary("busybox") // BusyBox v1.36.1.1
+                copyAsset("mkbootfs")
+                copyAsset("ksuinit")
+                copyAsset("payload-dumper-go")
+                copyAsset("flash_ak3.sh")
+                copyAsset("flash_ak3_mkbootfs.sh")
+                delay(180)
+            } catch (e: Exception) {
+                Log.e(TAG, e.message, e)
+                withContext(Dispatchers.Main) {
+                    showStartupError(e.message ?: getString(R.string.root_required))
                 }
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                showMainContent(fileSystemManager)
             }
         }
-        setContent {
+    }
+
+    private fun fadeToContent(render: () -> Unit) {
+        val decor = window.decorView
+        decor.animate().cancel()
+        decor.animate()
+            .alpha(0f)
+            .setDuration(120L)
+            .withEndAction {
+                render()
+                decor.alpha = 0f
+                decor.animate()
+                    .alpha(1f)
+                    .setDuration(220L)
+                    .start()
+            }
+            .start()
+    }
+
+    private fun showMainContent(fileSystemManager: FileSystemManager) {
+        fadeToContent {
+            setContent {
             val navController = rememberNavController()
             viewModel = viewModel {
                 val application = checkNotNull(get(ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY))
@@ -880,6 +985,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
         }
     }
 

@@ -76,7 +76,7 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun WizardScreen(navController: NavController) {
+fun WizardScreen(navController: NavController, onComplete: (() -> Unit)? = null) {
     var step by remember { mutableIntStateOf(1) }
     val context = LocalContext.current
 
@@ -110,8 +110,12 @@ fun WizardScreen(navController: NavController) {
                         onSkip = {
                             context.getSharedPreferences("wizard", 0)
                                 .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
-                            navController.navigate("main") {
-                                popUpTo("wizard") { inclusive = true }
+                            if (onComplete != null) {
+                                onComplete()
+                            } else {
+                                navController.navigate("main") {
+                                    popUpTo("wizard") { inclusive = true }
+                                }
                             }
                         }
                     )
@@ -119,8 +123,12 @@ fun WizardScreen(navController: NavController) {
                         onStart = {
                             context.getSharedPreferences("wizard", 0)
                                 .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
-                            navController.navigate("main") {
-                                popUpTo("wizard") { inclusive = true }
+                            if (onComplete != null) {
+                                onComplete()
+                            } else {
+                                navController.navigate("main") {
+                                    popUpTo("wizard") { inclusive = true }
+                                }
                             }
                         }
                     )
