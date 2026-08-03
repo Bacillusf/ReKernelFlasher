@@ -50,10 +50,6 @@ fun ColumnScope.ToolboxContent(
     navController: NavController
 ) {
     val context = LocalContext.current
-    val result = remember { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-        result.value = it
-    }
 
     // Toggle states read via root
     var avbDisabled by remember { mutableStateOf(false) }
@@ -67,30 +63,16 @@ fun ColumnScope.ToolboxContent(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(4.dp))
 
-        FilledTonalButton(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.primary
+        ListItem(
+            title = "解包",
+            subtitle = "Payload-Dumper 解包和解包记录",
+            leadingIcon = Icons.Filled.FolderOpen,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer
             ),
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
-            onClick = { launcher.launch("*/*") }
-        ) {
-            Icon(Icons.Filled.FolderOpen, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text("Payload-Dumper 解包", style = MaterialTheme.typography.titleMedium)
-        }
-
-        result.value?.let { uri ->
-            val fileName = uri.lastPathSegment ?: ""
-            if (fileName.endsWith(".bin", ignoreCase = true)) {
-                navController.navigate("toolbox/payload?uri=${Uri.encode(uri.toString())}")
-            } else {
-                Toast.makeText(context, "请选择 .bin 文件", Toast.LENGTH_SHORT).show()
-            }
-            result.value = null
-        }
+            onClick = { navController.navigate("toolbox/unpack") }
+        )
 
         Spacer(Modifier.height(4.dp))
 
@@ -180,6 +162,33 @@ fun ColumnScope.ToolboxContent(
             onClick = { navController.navigate("toolbox/diag_port") }
         )
 
+    }
+}
+
+@Composable
+fun ColumnScope.UnpackHubContent(
+    navController: NavController
+) {
+    val context = LocalContext.current
+    val result = remember { mutableStateOf<Uri?>(null) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+        result.value = it
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(4.dp))
+
+        ListItem(
+            title = "解包",
+            subtitle = "选择 payload.bin 并提取 img 分区文件",
+            leadingIcon = Icons.Filled.FolderOpen,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.primaryContainer,
+                content = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            onClick = { launcher.launch("*/*") }
+        )
+
         ListItem(
             title = "解包记录",
             subtitle = "查看已解包的 img 文件",
@@ -190,5 +199,15 @@ fun ColumnScope.ToolboxContent(
             ),
             onClick = { navController.navigate("toolbox/unpack_records") }
         )
+    }
+
+    result.value?.let { uri ->
+        val fileName = uri.lastPathSegment ?: ""
+        if (fileName.endsWith(".bin", ignoreCase = true)) {
+            navController.navigate("toolbox/payload?uri=${Uri.encode(uri.toString())}")
+        } else {
+            Toast.makeText(context, "请选择 .bin 文件", Toast.LENGTH_SHORT).show()
+        }
+        result.value = null
     }
 }

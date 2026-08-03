@@ -36,6 +36,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -119,6 +122,7 @@ import safe.kernel.flash.ui.screens.toolbox.PayloadDumperContent
 import safe.kernel.flash.ui.screens.toolbox.PayloadDumperExtractContent
 import safe.kernel.flash.ui.screens.toolbox.ToolboxContent
 import safe.kernel.flash.ui.screens.toolbox.UnpackRecordsContent
+import safe.kernel.flash.ui.screens.toolbox.UnpackHubContent
 import safe.kernel.flash.ui.screens.toolbox.DiagPortContent
 import safe.kernel.flash.ui.screens.toolbox.RkpFixContent
 import safe.kernel.flash.ui.theme.KernelFlasherTheme
@@ -129,8 +133,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
+import kotlin.coroutines.resume
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import kotlin.system.exitProcess
@@ -157,6 +163,8 @@ class MainActivity : ComponentActivity() {
     private var backendInitializationStarted: Boolean = false
     private val startupProgress = mutableFloatStateOf(0.08f)
     private val startupStatusText = mutableStateOf("正在检测依赖")
+    private val backendReadyCallbacks = mutableListOf<(Boolean) -> Unit>()
+    private var backendInitializationFailed: String? = null
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
@@ -244,11 +252,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun notifyBackendReady(success: Boolean) {
+        val callbacks = backendReadyCallbacks.toList()
+        backendReadyCallbacks.clear()
+        callbacks.forEach { it(success) }
+    }
+
+    private suspend fun prepareBackendBeforeWizardContinue(): Boolean = suspendCancellableCoroutine { continuation ->
+        lifecycleScope.launch(Dispatchers.Main) {
+            readyFileSystemManager?.let {
+                continuation.resume(true)
+                return@launch
+            }
+            backendReadyCallbacks += { success ->
+                if (continuation.isActive) continuation.resume(success)
+            }
+            startBackendInitialization(showLoading = false, openMainWhenReady = false)
+        }
+    }
+
     private fun startBackendInitialization(showLoading: Boolean, openMainWhenReady: Boolean) {
         readyFileSystemManager?.let { readyManager ->
             if (openMainWhenReady) {
+                backendInitializationFailed = null
                 startupProgress.floatValue = 1f
                 startupStatusText.value = "初始化完成"
+                notifyBackendReady(true)
                 fadeToContent { showMainContent(readyManager) }
             }
             return
@@ -259,6 +288,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         backendInitializationStarted = true
+        backendInitializationFailed = null
 
         if (showLoading) {
             startupProgress.floatValue = 0.08f
@@ -280,6 +310,8 @@ class MainActivity : ComponentActivity() {
                         RootService.bind(intent, AidlConnection())
                     } else {
                         backendInitializationStarted = false
+                        backendInitializationFailed = getString(R.string.root_required)
+                        notifyBackendReady(false)
                         if (openMainWhenReady || openMainWhenBackendReady) {
                             showStartupError(getString(R.string.root_required))
                         }
@@ -289,6 +321,8 @@ class MainActivity : ComponentActivity() {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
                     backendInitializationStarted = false
+                    backendInitializationFailed = e.message ?: getString(R.string.root_required)
+                    notifyBackendReady(false)
                     if (openMainWhenReady || openMainWhenBackendReady) {
                         showStartupError(e.message ?: getString(R.string.root_required))
                     }
@@ -384,7 +418,7 @@ class MainActivity : ComponentActivity() {
                         WizardScreen(
                             navController = navController,
                             onDependenciesReady = {
-                                startBackendInitialization(showLoading = false, openMainWhenReady = false)
+                                prepareBackendBeforeWizardContinue()
                             },
                             onComplete = { completeFirstRunWizard() }
                         )
@@ -474,6 +508,9 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
+                    backendInitializationStarted = false
+                    backendInitializationFailed = e.message ?: getString(R.string.root_required)
+                    notifyBackendReady(false)
                     if (openMainWhenBackendReady) {
                         showStartupError(e.message ?: getString(R.string.root_required))
                     }
@@ -482,8 +519,10 @@ class MainActivity : ComponentActivity() {
             }
             withContext(Dispatchers.Main) {
                 readyFileSystemManager = fileSystemManager
+                backendInitializationFailed = null
                 startupProgress.floatValue = 1f
                 startupStatusText.value = "初始化完成"
+                notifyBackendReady(true)
                 if (openMainWhenBackendReady) {
                     fadeToContent { showMainContent(fileSystemManager) }
                 }
@@ -583,7 +622,17 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val tabRoutes = listOf("main", "flash", "backups", "settings")
+                    val tabIndex = tabRoutes.indexOf(currentRoute).coerceAtLeast(0)
                     val isTabRoute = currentRoute in tabRoutes
+                    val pagerState = rememberPagerState(initialPage = tabIndex) { tabRoutes.size }
+                    val pagerScope = rememberCoroutineScope()
+                    fun navigateToTab(route: String) {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
 
                     val dpiScale = mainViewModel.dpiScale
                     val density = LocalDensity.current
@@ -727,12 +776,89 @@ class MainActivity : ComponentActivity() {
                             drawRect(floatingNavBackground)
                             drawContent()
                         }
+                        LaunchedEffect(tabIndex, isTabRoute) {
+                            if (isTabRoute && pagerState.currentPage != tabIndex) {
+                                pagerState.animateScrollToPage(tabIndex)
+                            }
+                        }
+                        LaunchedEffect(pagerState.settledPage, isTabRoute) {
+                            if (isTabRoute) {
+                                val targetRoute = tabRoutes[pagerState.settledPage]
+                                if (targetRoute != currentRoute) {
+                                    navigateToTab(targetRoute)
+                                }
+                            }
+                        }
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) {
+                                if (isTabRoute) {
+                                    HorizontalPager(
+                                        state = pagerState,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .layerBackdrop(floatingNavBackdrop),
+                                        beyondViewportPageCount = 1,
+                                        key = { page -> tabRoutes[page] }
+                                    ) { page ->
+                                        when (tabRoutes[page]) {
+                                            "main" -> {
+                                                val showRebootMenu = remember { mutableStateOf(false) }
+                                                RefreshableScreen(mainViewModel, navController, swipeEnabled = true, bottomContentPadding = 120.dp, actions = {
+                                                    Box {
+                                                        IconButton(onClick = { showRebootMenu.value = true }) {
+                                                            Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
+                                                        }
+                                                        DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_recovery)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("recovery") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_bootloader)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("bootloader") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_download)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("download") })
+                                                            DropdownMenuItem(text = { Text(stringResource(R.string.reboot_edl)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("edl") })
+                                                        }
+                                                    }
+                                                }) {
+                                                    MainContent(mainViewModel, navController)
+                                                }
+                                            }
+                                            "flash" -> {
+                                                RefreshableScreen(
+                                                    mainViewModel,
+                                                    navController,
+                                                    bottomContentPadding = 120.dp,
+                                                    actions = {
+                                                        IconButton(onClick = { navController.navigate("repo") }) {
+                                                            Icon(
+                                                                Icons.Filled.Cloud,
+                                                                contentDescription = "GKI/OKI 仓库",
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                ) {
+                                                    FlashHomeContent(mainViewModel, navController)
+                                                }
+                                            }
+                                            "backups" -> {
+                                                backupsViewModel.clearCurrent()
+                                                RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                                    BackupsContent(backupsViewModel, navController)
+                                                }
+                                            }
+                                            "settings" -> {
+                                                RefreshableScreen(mainViewModel, navController, bottomContentPadding = 120.dp) {
+                                                    SettingsContent(mainViewModel, navController)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 NavHost(
                                     navController = navController,
                                     startDestination = startDest,
-                                    modifier = Modifier.fillMaxSize().layerBackdrop(floatingNavBackdrop)
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .layerBackdrop(floatingNavBackdrop)
+                                        .then(if (isTabRoute) Modifier.size(0.dp) else Modifier)
                                 ) {
                                     composable("main") {
                                         val showRebootMenu = remember { mutableStateOf(false) }
@@ -895,6 +1021,11 @@ class MainActivity : ComponentActivity() {
                                 ToolboxContent(navController)
                             }
                         }
+                        composable("toolbox/unpack") {
+                            RefreshableScreen(mainViewModel, navController) {
+                                UnpackHubContent(navController)
+                            }
+                        }
                         composable("toolbox/payload?uri={uri}") { backStackEntry ->
                             val uri = backStackEntry.arguments?.getString("uri") ?: ""
                             RefreshableScreen(mainViewModel, navController) {
@@ -957,11 +1088,11 @@ class MainActivity : ComponentActivity() {
                                         currentRoute = currentRoute,
                                         backdrop = floatingNavBackdrop,
                                         onItemClick = { item ->
-                                            navController.navigate(item.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                launchSingleTop = true
-                                                restoreState = true
+                                            val targetIndex = tabRoutes.indexOf(item.route)
+                                            if (targetIndex >= 0) {
+                                                pagerScope.launch { pagerState.animateScrollToPage(targetIndex) }
                                             }
+                                            navigateToTab(item.route)
                                         }
                                     )
                                 }

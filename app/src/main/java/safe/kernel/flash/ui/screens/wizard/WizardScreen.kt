@@ -78,7 +78,7 @@ import java.io.File
 @Composable
 fun WizardScreen(
     navController: NavController,
-    onDependenciesReady: (() -> Unit)? = null,
+    onDependenciesReady: (suspend () -> Boolean)? = null,
     onComplete: (() -> Unit)? = null
 ) {
     var step by remember { mutableIntStateOf(1) }
@@ -210,7 +210,7 @@ private fun WizardStep1(onNext: () -> Unit) {
 @Composable
 private fun WizardStep2(
     context: android.content.Context,
-    onDependenciesReady: (() -> Unit)?,
+    onDependenciesReady: (suspend () -> Boolean)?,
     onNext: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -238,10 +238,19 @@ private fun WizardStep2(
         checkDone = false
         checkError = null
         try {
-            statusText = "正在确认 Root 授权"
-            progress = 0.22f
-            val rootGranted = withContext(Dispatchers.IO) { Shell.isAppGrantedRoot() == true }
-            delay(120)
+            statusText = "正在请求 Root 授权"
+            progress = 0.16f
+            val rootGranted = withContext(Dispatchers.IO) {
+                Shell.getShell()
+                var granted = false
+                for (attempt in 0 until 8) {
+                    granted = Shell.isAppGrantedRoot() == true
+                    if (granted) break
+                    Thread.sleep(250)
+                }
+                granted
+            }
+            delay(80)
 
             statusText = "正在识别 Root 管理器"
             progress = 0.45f
@@ -267,9 +276,9 @@ private fun WizardStep2(
             delay(120)
 
             statusText = "正在检查本地工作目录"
-            progress = 0.86f
+            progress = 0.78f
             hasWorkDir = withContext(Dispatchers.IO) { context.filesDir.exists() && context.filesDir.canWrite() }
-            delay(120)
+            delay(80)
 
             if (!rootGranted) {
                 checkError = "未获得 Root 授权，请先在 Root 管理器中允许本应用。"
@@ -280,15 +289,26 @@ private fun WizardStep2(
             } else if (!hasWorkDir) {
                 checkError = "本地工作目录不可写。"
             } else {
-                statusText = "依赖检测完成"
-                progress = 1f
-                checkDone = true
-                if (!dependenciesReadyDispatched) {
+                statusText = "正在完成后端初始化"
+                progress = 0.9f
+                val backendReady = if (!dependenciesReadyDispatched) {
                     dependenciesReadyDispatched = true
-                    onDependenciesReady?.invoke()
+                    onDependenciesReady?.invoke() ?: true
+                } else {
+                    true
+                }
+                if (backendReady) {
+                    statusText = "依赖检测完成"
+                    progress = 1f
+                    checkDone = true
+                } else {
+                    dependenciesReadyDispatched = false
+                    checkError = "后端初始化失败，请点击重新检测。"
+                    progress = 0.86f
                 }
             }
         } catch (e: Exception) {
+            dependenciesReadyDispatched = false
             checkError = "依赖检测失败: ${e.message}"
         }
         checking = false
