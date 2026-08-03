@@ -21,6 +21,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -154,6 +155,8 @@ class MainActivity : ComponentActivity() {
 
     private var rootServiceConnected: Boolean = false
     private var backendInitializationStarted: Boolean = false
+    private val startupProgress = mutableFloatStateOf(0.08f)
+    private val startupStatusText = mutableStateOf("正在检测依赖")
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
     private var viewModel: MainViewModel? = null
@@ -234,9 +237,18 @@ class MainActivity : ComponentActivity() {
         startBackendInitialization(showLoading = true, openMainWhenReady = true)
     }
 
+    private fun updateStartupProgress(progress: Float, status: String) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            startupProgress.floatValue = progress.coerceIn(0f, 1f)
+            startupStatusText.value = status
+        }
+    }
+
     private fun startBackendInitialization(showLoading: Boolean, openMainWhenReady: Boolean) {
         readyFileSystemManager?.let { readyManager ->
             if (openMainWhenReady) {
+                startupProgress.floatValue = 1f
+                startupStatusText.value = "初始化完成"
                 fadeToContent { showMainContent(readyManager) }
             }
             return
@@ -249,14 +261,20 @@ class MainActivity : ComponentActivity() {
         backendInitializationStarted = true
 
         if (showLoading) {
+            startupProgress.floatValue = 0.08f
+            startupStatusText.value = "正在检测依赖"
             showStartupLoading()
         }
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                updateStartupProgress(0.18f, "正在初始化 Shell")
                 Shell.getShell()
+                updateStartupProgress(0.34f, "正在确认 Root 授权")
                 val rootGranted = Shell.isAppGrantedRoot() == true
                 withContext(Dispatchers.Main) {
                     if (rootGranted) {
+                        startupProgress.floatValue = 0.48f
+                        startupStatusText.value = "正在连接后端服务"
                         rootServiceConnected = false
                         val intent = Intent(this@MainActivity, FilesystemService::class.java)
                         RootService.bind(intent, AidlConnection())
@@ -304,6 +322,14 @@ class MainActivity : ComponentActivity() {
                     label = "startupIconScale"
                 )
 
+                val loadingProgress by startupProgress
+                val loadingStatus by startupStatusText
+                val animatedLoadingProgress by animateFloatAsState(
+                    targetValue = loadingProgress,
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    label = "startupLoadingProgress"
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -331,13 +357,14 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "正在检测依赖",
+                            text = loadingStatus,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(Modifier.height(22.dp))
                         LinearProgressIndicator(
+                            progress = { animatedLoadingProgress.coerceIn(0f, 1f) },
                             modifier = Modifier.fillMaxWidth(0.62f),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
@@ -424,20 +451,26 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
+        updateStartupProgress(0.58f, "正在连接文件系统服务")
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                updateStartupProgress(0.64f, "正在准备后端工具")
                 Shell.cmd("cd $filesDir").exec()
+                updateStartupProgress(0.68f, "正在准备分区工具")
                 copyNativeBinary("lptools_static") // v20220825
                 copyNativeBinary("httools_static") // v3.2.0
+                updateStartupProgress(0.74f, "正在准备刷写工具")
                 copyNativeBinary("magiskboot") // v29.0
                 copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+                updateStartupProgress(0.82f, "正在准备 BusyBox")
                 copyNativeBinary("busybox") // BusyBox v1.36.1.1
+                updateStartupProgress(0.88f, "正在准备脚本")
                 copyAsset("mkbootfs")
                 copyAsset("ksuinit")
                 copyAsset("payload-dumper-go")
                 copyAsset("flash_ak3.sh")
                 copyAsset("flash_ak3_mkbootfs.sh")
-                delay(260)
+                updateStartupProgress(0.96f, "即将进入主页")
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
@@ -449,6 +482,8 @@ class MainActivity : ComponentActivity() {
             }
             withContext(Dispatchers.Main) {
                 readyFileSystemManager = fileSystemManager
+                startupProgress.floatValue = 1f
+                startupStatusText.value = "初始化完成"
                 if (openMainWhenBackendReady) {
                     fadeToContent { showMainContent(fileSystemManager) }
                 }
