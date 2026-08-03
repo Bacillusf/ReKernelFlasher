@@ -26,6 +26,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -132,6 +134,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import kotlin.math.abs
 import kotlin.system.exitProcess
 
 object SharedViewModels {
@@ -548,7 +551,27 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val tabRoutes = listOf("main", "flash", "backups", "settings")
+                    val tabNavItems = listOf(
+                        NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
+                        NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
+                        NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
+                        NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
+                    )
                     val isTabRoute = currentRoute in tabRoutes
+                    var tabSwipeOffset by remember { mutableFloatStateOf(0f) }
+                    fun navigateToTab(route: String) {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    fun navigateBySwipe(offset: Float) {
+                        val currentIndex = tabRoutes.indexOf(currentRoute)
+                        if (currentIndex < 0 || abs(offset) < 96f) return
+                        val targetIndex = if (offset < 0f) currentIndex + 1 else currentIndex - 1
+                        tabRoutes.getOrNull(targetIndex)?.let(::navigateToTab)
+                    }
 
                     val dpiScale = mainViewModel.dpiScale
                     val density = LocalDensity.current
@@ -693,7 +716,25 @@ class MainActivity : ComponentActivity() {
                             drawContent()
                         }
                         Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) {
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .pointerInput(isTabRoute, currentRoute) {
+                                        if (!isTabRoute) return@pointerInput
+                                        detectHorizontalDragGestures(
+                                            onDragStart = { tabSwipeOffset = 0f },
+                                            onHorizontalDrag = { change, dragAmount ->
+                                                tabSwipeOffset += dragAmount
+                                                change.consume()
+                                            },
+                                            onDragEnd = {
+                                                navigateBySwipe(tabSwipeOffset)
+                                                tabSwipeOffset = 0f
+                                            },
+                                            onDragCancel = { tabSwipeOffset = 0f }
+                                        )
+                                    }
+                            ) {
                                 NavHost(
                                     navController = navController,
                                     startDestination = startDest,
@@ -911,21 +952,10 @@ class MainActivity : ComponentActivity() {
                                 if (isTabRoute) {
                                     GlassNavigationBar(
                                         modifier = Modifier.align(Alignment.BottomCenter),
-                                        items = listOf(
-                                            NavItem("main", stringResource(R.string.tab_home), Icons.Filled.Home),
-                                            NavItem("flash", stringResource(R.string.tab_flash), Icons.Filled.Build),
-                                            NavItem("backups", stringResource(R.string.backups), Icons.Filled.List),
-                                            NavItem("settings", stringResource(R.string.tab_settings), Icons.Filled.Settings)
-                                        ),
+                                        items = tabNavItems,
                                         currentRoute = currentRoute,
                                         backdrop = floatingNavBackdrop,
-                                        onItemClick = { item ->
-                                            navController.navigate(item.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
-                                        }
+                                        onItemClick = { item -> navigateToTab(item.route) }
                                     )
                                 }
                             }
