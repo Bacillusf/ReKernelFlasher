@@ -1,8 +1,5 @@
 package safe.kernel.flash.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,16 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +45,7 @@ import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
+import safe.kernel.flash.ui.theme.liquidGlass
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -82,7 +77,6 @@ fun RefreshableScreen(
         targetValue = 1f - collapsedProgress,
         label = "expandedTitleAlpha"
     )
-    val hasBack = navController.previousBackStackEntry != null
     val title = stringResource(R.string.app_name)
 
     Box(
@@ -111,6 +105,18 @@ fun RefreshableScreen(
             }
         )
 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(statusBar.calculateTopPadding() + 56.dp)
+                .alpha((collapsedProgress * 0.88f).coerceIn(0f, 0.88f))
+                .liquidGlass(
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    cornerRadius = 24.dp,
+                    highlightAlpha = 0.10f,
+                )
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -119,26 +125,14 @@ fun RefreshableScreen(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (hasBack) {
-                AnimatedVisibility(!viewModel.isRefreshing, enter = fadeIn(), exit = fadeOut()) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            } else {
-                Spacer(Modifier.size(48.dp))
-            }
+            Spacer(Modifier.size(48.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
-                    .padding(start = if (hasBack) 0.dp else 12.dp)
+                    .padding(start = 12.dp)
                     .weight(1f)
                     .alpha(collapsedAlpha)
             )
