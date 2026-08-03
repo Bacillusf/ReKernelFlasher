@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -45,7 +44,6 @@ import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
 import safe.kernel.flash.ui.screens.main.MainViewModel
-import safe.kernel.flash.ui.theme.liquidGlass
 
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
@@ -103,18 +101,6 @@ fun RefreshableScreen(
                 Spacer(Modifier.height(16.dp))
                 content()
             }
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(statusBar.calculateTopPadding() + 56.dp)
-                .alpha((collapsedProgress * 0.88f).coerceIn(0f, 0.88f))
-                .liquidGlass(
-                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                    cornerRadius = 24.dp,
-                    highlightAlpha = 0.10f,
-                )
         )
 
         Row(
