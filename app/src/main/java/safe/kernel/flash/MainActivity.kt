@@ -264,6 +264,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun enterMainAfterStartup(fileSystemManager: FileSystemManager) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            startupProgress.floatValue = 1f
+            startupStatusText.value = "检查通过，正在进入..."
+            delay(360)
+            showMainContent(fileSystemManager)
+        }
+    }
+
     private fun notifyBackendReady(success: Boolean) {
         val callbacks = backendReadyCallbacks.toList()
         backendReadyCallbacks.clear()
@@ -279,8 +288,29 @@ class MainActivity : ComponentActivity() {
             backendReadyCallbacks += { success ->
                 if (continuation.isActive) continuation.resume(success)
             }
-            startBackendInitialization(showLoading = false, openMainWhenReady = false)
+            startBackendAfterRootGranted(openMainWhenReady = false)
         }
+    }
+
+    private fun startBackendAfterRootGranted(openMainWhenReady: Boolean) {
+        readyFileSystemManager?.let { readyManager ->
+            backendInitializationFailed = null
+            startupProgress.floatValue = 1f
+            startupStatusText.value = "初始化完成"
+            notifyBackendReady(true)
+            if (openMainWhenReady) enterMainAfterStartup(readyManager)
+            return
+        }
+
+        openMainWhenBackendReady = openMainWhenBackendReady || openMainWhenReady
+        if (backendInitializationStarted) return
+        backendInitializationStarted = true
+        backendInitializationFailed = null
+        startupProgress.floatValue = 0.48f
+        startupStatusText.value = "正在连接后端服务"
+        rootServiceConnected = false
+        val intent = Intent(this@MainActivity, FilesystemService::class.java)
+        RootService.bind(intent, AidlConnection())
     }
 
     private fun startBackendInitialization(showLoading: Boolean, openMainWhenReady: Boolean) {
@@ -290,7 +320,7 @@ class MainActivity : ComponentActivity() {
                 startupProgress.floatValue = 1f
                 startupStatusText.value = "初始化完成"
                 notifyBackendReady(true)
-                fadeToContent { showMainContent(readyManager) }
+                enterMainAfterStartup(readyManager)
             }
             return
         }
@@ -315,11 +345,7 @@ class MainActivity : ComponentActivity() {
                 val rootGranted = Shell.isAppGrantedRoot() == true
                 withContext(Dispatchers.Main) {
                     if (rootGranted) {
-                        startupProgress.floatValue = 0.48f
-                        startupStatusText.value = "正在连接后端服务"
-                        rootServiceConnected = false
-                        val intent = Intent(this@MainActivity, FilesystemService::class.java)
-                        RootService.bind(intent, AidlConnection())
+                        startBackendAfterRootGranted(openMainWhenReady)
                     } else {
                         backendInitializationStarted = false
                         backendInitializationFailed = getString(R.string.root_required)
@@ -506,7 +532,7 @@ class MainActivity : ComponentActivity() {
                     startupFirstRunModuleChoice.value = true
                 } else {
                     readyFileSystemManager?.let { readyManager ->
-                        fadeToContent { showMainContent(readyManager) }
+                        enterMainAfterStartup(readyManager)
                     }
                 }
             } catch (e: Exception) {
@@ -597,7 +623,7 @@ class MainActivity : ComponentActivity() {
         startupStatusText.value = "检查通过，正在进入..."
         startupFirstRunModuleChoice.value = false
         readyFileSystemManager?.let { readyManager ->
-            fadeToContent { showMainContent(readyManager) }
+            enterMainAfterStartup(readyManager)
         } ?: runLauncherStartupChecks(firstRun = false)
     }
 
@@ -716,7 +742,7 @@ class MainActivity : ComponentActivity() {
                 startupStatusText.value = "初始化完成"
                 notifyBackendReady(true)
                 if (openMainWhenBackendReady) {
-                    fadeToContent { showMainContent(fileSystemManager) }
+                    enterMainAfterStartup(fileSystemManager)
                 }
             }
         }
