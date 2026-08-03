@@ -295,10 +295,10 @@ private fun DeviceSelectDialog(
                 color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,
-                shadowElevation = 12.dp,
+                shadowElevation = 0.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .softShadow(cornerRadius = 24.dp, alpha = 0.20f, offsetY = 12.dp)
+                    
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(24.dp, 22.dp, 24.dp, 18.dp)
