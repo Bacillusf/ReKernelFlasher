@@ -18,12 +18,23 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -38,6 +49,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,9 +61,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -231,11 +245,57 @@ class MainActivity : ComponentActivity() {
     private fun showStartupPlaceholder() {
         setContent {
             KernelFlasherTheme {
+                val pulse = rememberInfiniteTransition(label = "startupPulse")
+                val iconScale by pulse.animateFloat(
+                    initialValue = 0.96f,
+                    targetValue = 1.04f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "startupIconScale"
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                )
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 40.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_splash_foreground),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(86.dp)
+                                .scale(iconScale)
+                        )
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "正在检测依赖",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.height(22.dp))
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(0.62f),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f)
+                        )
+                    }
+                }
             }
         }
     }
