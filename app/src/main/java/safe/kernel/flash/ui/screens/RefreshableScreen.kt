@@ -87,7 +87,6 @@ fun RefreshableScreen(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(top = statusBar.calculateTopPadding() + 68.dp)
-                .padding(bottom = bottomContentPadding + navigationBars.calculateBottomPadding())
                 .fillMaxSize()
                 .verticalScroll(scrollState),
             content = {
@@ -100,6 +99,7 @@ fun RefreshableScreen(
                 )
                 Spacer(Modifier.height(16.dp))
                 content()
+                Spacer(Modifier.height(bottomContentPadding + navigationBars.calculateBottomPadding()))
             }
         )
 
