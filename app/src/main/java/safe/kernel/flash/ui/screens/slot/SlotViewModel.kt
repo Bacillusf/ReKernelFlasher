@@ -41,6 +41,15 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
 
+private data class BootUnpackResult(
+    val image: File,
+    val location: String,
+    val output: String,
+    val ramdiskName: String?,
+    val kernelFound: Boolean,
+    val success: Boolean,
+)
+
 class SlotViewModel(
     context: Context,
     private val fileSystemManager: FileSystemManager,
@@ -148,11 +157,31 @@ class SlotViewModel(
 
         val magiskboot = File(context.filesDir, "magiskboot")
         val bootctl = File(context.filesDir, "bootctl")
-        Shell.cmd("$magiskboot cleanup").exec()
+        val workDir = context.filesDir.absolutePath
+        fun magiskbootCmd(args: String) = "cd $workDir && $magiskboot $args"
+        fun cleanupMagiskboot() = Shell.cmd(magiskbootCmd("cleanup")).exec()
+        fun unpackImage(image: File?, location: String): BootUnpackResult? {
+            if (image == null || !image.exists()) return null
+            cleanupMagiskboot()
+            val output = mutableListOf<String>()
+            val result = Shell.cmd(magiskbootCmd("unpack $image")).to(output, output).exec()
+            val ramdiskName = listOf("ramdisk.cpio", "vendor_ramdisk.cpio")
+                .firstOrNull { File(context.filesDir, it).exists() }
+            val kernelFound = File(context.filesDir, "kernel").exists()
+            return BootUnpackResult(
+                image = image,
+                location = location,
+                output = output.joinToString("\n"),
+                ramdiskName = ramdiskName,
+                kernelFound = kernelFound,
+                success = result.isSuccess,
+            )
+        }
 
-        val unpackBootOutput = mutableListOf<String>()
-        Shell.cmd("$magiskboot unpack $boot").to(unpackBootOutput, unpackBootOutput).exec()
-        val bootUnpackOp = unpackBootOutput.joinToString("\n")
+        cleanupMagiskboot()
+
+        val bootResult = unpackImage(boot, "boot.img")
+        val bootUnpackOp = bootResult?.output.orEmpty()
 
         if(slotSuffix != "") {
             val resCode1 = Shell.cmd("$bootctl is-slot-bootable " + if (slotSuffix == "_a") "0" else "1").exec().code
@@ -171,29 +200,32 @@ class SlotViewModel(
         }
         Log.d(TAG, _slotInfo.value.bootImgInfo.toString())
 
-        if (initBoot != null && _slotInfo.value.ramdiskInfo.ramdiskFmt == null) {
-            val unpackInitBootOutput = mutableListOf<String>()
-            if(Shell.cmd("$magiskboot unpack $initBoot").to(unpackInitBootOutput, unpackInitBootOutput).exec().isSuccess)
-            {
-                val initBootUnpackOp = unpackInitBootOutput.joinToString("\n")
-                _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(initBootUnpackOp.trimIndent(), RAMDISK_FMT)
-                _slotInfo.value.ramdiskInfo.ramdiskLocation = "init_boot.img"
+        var sha1Result = bootResult?.takeIf { it.ramdiskName != null || it.kernelFound }
+        if (_slotInfo.value.ramdiskInfo.ramdiskFmt == null) {
+            val initBootResult = unpackImage(initBoot, "init_boot.img")
+            if (initBootResult != null) {
+                val initBootUnpackOp = initBootResult.output
+                val initRamdiskFmt = extractKernelValues(initBootUnpackOp.trimIndent(), RAMDISK_FMT)
+                if (initBootResult.success && (initRamdiskFmt != null || initBootResult.ramdiskName != null)) {
+                    _slotInfo.value.ramdiskInfo.ramdiskFmt = initRamdiskFmt
+                    _slotInfo.value.ramdiskInfo.ramdiskLocation = "init_boot.img"
+                    sha1Result = initBootResult
+                }
             }
         }
-        else
-        {
-            var vendor_boot = PartitionUtil.findPartitionBlockDevice(context, "vendor_boot", slotSuffix)
-            val unpackVendorBootOutput = mutableListOf<String>()
-            if(Shell.cmd("$magiskboot unpack $vendor_boot").to(unpackVendorBootOutput, unpackVendorBootOutput).exec().isSuccess)
-            {
-                val vendorBootUnpackOp = unpackVendorBootOutput.joinToString("\n")
-                _slotInfo.value.ramdiskInfo.ramdiskFmt = extractKernelValues(vendorBootUnpackOp.trimIndent(), VND_RAMDISK, true)
-                _slotInfo.value.ramdiskInfo.ramdiskLocation = "vendor_boot.img"
+        if (_slotInfo.value.ramdiskInfo.ramdiskFmt == null) {
+            val vendorBoot = PartitionUtil.findPartitionBlockDevice(context, "vendor_boot", slotSuffix)
+            val vendorBootResult = unpackImage(vendorBoot, "vendor_boot.img")
+            if (vendorBootResult != null) {
+                val vendorBootUnpackOp = vendorBootResult.output
+                val vendorRamdiskFmt = extractKernelValues(vendorBootUnpackOp.trimIndent(), VND_RAMDISK, true)
+                if (vendorBootResult.success && (vendorRamdiskFmt != null || vendorBootResult.ramdiskName != null)) {
+                    _slotInfo.value.ramdiskInfo.ramdiskFmt = vendorRamdiskFmt
+                    _slotInfo.value.ramdiskInfo.ramdiskLocation = "vendor_boot.img"
+                    sha1Result = vendorBootResult
+                }
             }
         }
-
-        val ramdisk = File(context.filesDir, "ramdisk.cpio")
-        val kernel = File(context.filesDir, "kernel")
 
         var vendorDlkm = PartitionUtil.findPartitionBlockDevice(context, "vendor_dlkm", slotSuffix)
         hasVendorDlkm = vendorDlkm != null
@@ -210,14 +242,15 @@ class SlotViewModel(
             }
         }
 
-        if (ramdisk.exists()) {
-            when (Shell.cmd("$magiskboot cpio ramdisk.cpio test").exec().code) {
-                0 -> _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
-                1 -> _sha1 = Shell.cmd("$magiskboot cpio ramdisk.cpio sha1").exec().out.firstOrNull()
-                else -> _error = "Invalid ramdisk in boot.img"
+        if (sha1Result?.ramdiskName != null) {
+            val ramdiskName = sha1Result.ramdiskName
+            when (Shell.cmd(magiskbootCmd("cpio $ramdiskName test")).exec().code) {
+                0 -> _sha1 = Shell.cmd(magiskbootCmd("sha1 ${sha1Result.image}")).exec().out.firstOrNull()
+                1 -> _sha1 = Shell.cmd(magiskbootCmd("cpio $ramdiskName sha1")).exec().out.firstOrNull()
+                else -> _error = "Invalid ramdisk in ${sha1Result.location}"
             }
-        } else if (kernel.exists()) {
-            _sha1 = Shell.cmd("$magiskboot sha1 $boot").exec().out.firstOrNull()
+        } else if (sha1Result?.kernelFound == true) {
+            _sha1 = Shell.cmd(magiskbootCmd("sha1 ${sha1Result.image}")).exec().out.firstOrNull()
             if(_slotInfo.value.bootImgInfo.headerVersion.equals("4") && _slotInfo.value.ramdiskInfo.ramdiskLocation.equals(null))
             {
                 _slotInfo.value.ramdiskInfo.ramdiskLocation = "boot.img"
@@ -231,7 +264,7 @@ class SlotViewModel(
             }
             _error = "Unable to generate SHA1 hash. Invalid boot.img or magiskboot unpack failed!"
         }
-        Shell.cmd("$magiskboot cleanup").exec()
+        cleanupMagiskboot()
 
         PartitionUtil.AvailablePartitions.forEach { partitionName ->
             _backupPartitions[partitionName] = true
