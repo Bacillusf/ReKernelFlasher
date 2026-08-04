@@ -166,6 +166,14 @@ private enum class StartupMetaModule(
     OverlayFs("Meta-OverlayFS", "model/overlayfs.zip", "overlayfs.zip"),
 }
 
+private data class StartupPreflightResult(
+    val rootManager: String,
+    val hasBackendPackage: Boolean,
+    val hasMagicMountPackage: Boolean,
+    val hasOverlayFsPackage: Boolean,
+    val workDirWritable: Boolean,
+)
+
 private class RkfMainPagerState(
     val pagerState: PagerState,
     private val coroutineScope: CoroutineScope,
@@ -272,27 +280,49 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun copyAsset(filename: String) {
+    private fun copyAsset(filename: String): File {
         val dest = File(filesDir, filename)
-        if (dest.exists() && dest.length() > 0L) return
+        if (dest.exists() && dest.length() > 0L) return dest
         assets.open(filename).use { inputStream ->
             dest.outputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
         }
-        Shell.cmd("chmod +x $dest").exec()
+        dest.setExecutable(true, false)
+        return dest
     }
 
-    private fun copyNativeBinary(filename: String) {
+    private fun copyNativeBinary(filename: String): File {
         val binary = File(applicationInfo.nativeLibraryDir, "lib$filename.so")
         val dest = File(filesDir, filename)
-        if (dest.exists() && dest.length() == binary.length()) return
+        if (dest.exists() && dest.length() == binary.length()) return dest
         binary.inputStream().use { inputStream ->
             dest.outputStream().use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
         }
-        Shell.cmd("chmod +x $dest").exec()
+        dest.setExecutable(true, false)
+        return dest
+    }
+
+    private fun chmodExecutables(files: List<File>) {
+        if (files.isEmpty()) return
+        val paths = files.joinToString(" ") { it.absolutePath }
+        Shell.cmd("chmod 755 $paths").exec()
+    }
+
+    private fun hasAsset(assetPath: String): Boolean = runCatching {
+        assets.open(assetPath).use { true }
+    }.getOrDefault(false)
+
+    private fun detectRootManager(): String? {
+        val out = Shell.cmd(
+            "if [ -f /data/adb/ksud ]; then echo KernelSU; " +
+                "elif [ -f /data/adb/apd ]; then echo APatch; " +
+                "elif [ -f /data/adb/magisk/magisk ]; then echo Magisk; " +
+                "else echo none; fi"
+        ).exec().out.firstOrNull()
+        return out?.takeIf { it != "none" }
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -437,7 +467,7 @@ class MainActivity : ComponentActivity() {
     private fun completeFirstRunWizard() {
         openMainWhenBackendReady = true
         readyFileSystemManager?.let { readyManager ->
-            fadeToContent { showMainContent(readyManager) }
+            enterMainAfterStartup(readyManager)
             return
         }
         if (!backendInitializationStarted) {
@@ -492,7 +522,7 @@ class MainActivity : ComponentActivity() {
                         if (firstRun) {
                             Spacer(Modifier.height(18.dp))
                             Text(
-                                text = "需要刷写后端模块后，这些功能才会完整可用。",
+                                text = "支持 AK3 ZIP、分区镜像、KernelSU LKM、A/B 无缝更新、Payload-Dumper 解包，并可自动禁用/隐藏 AVB2.0 校检。",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
@@ -536,8 +566,22 @@ class MainActivity : ComponentActivity() {
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Text(
-                                    text = "请选择一种后端模块刷写方案：",
+                                    text = "需要刷入后端模块以启用以下功能：",
                                     style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "• 守护进程：刷写时保持应用后台运行，通知栏显示刷写状态\n" +
+                                        "• AVB2.0 工具：自动禁用 AVB 校检，防止刷写后变砖\n" +
+                                        "• 隐藏 AVB 状态：隐藏已关闭校检的痕迹",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "可选安装 META：选择重定向方案或挂载方案，也可以跳过。",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -549,7 +593,7 @@ class MainActivity : ComponentActivity() {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.MagicMount) "安装中" else "MagicMountRS")
                                             Text(
-                                                text = "重定向方案",
+                                                text = "Magic Mount 重定向方案",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                                             )
@@ -562,19 +606,13 @@ class MainActivity : ComponentActivity() {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.OverlayFs) "安装中" else "Meta-OverlayFS")
                                             Text(
-                                                text = "挂载方案",
+                                                text = "OverlayFS 挂载方案",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                                             )
                                         }
                                     }
                                 }
-                                Text(
-                                    text = "刷写后端模块后，启动后的工具、解包和刷写能力才会完整生效。",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Medium
-                                )
                                 OutlinedButton(
                                     enabled = !installingModule,
                                     onClick = { finishFirstRunStartup() }
@@ -599,14 +637,14 @@ class MainActivity : ComponentActivity() {
         openMainWhenBackendReady = false
         lifecycleScope.launch {
             try {
-                updateStartupProgress(0.18f, "正在请求 Root 权限...")
+                updateStartupProgress(0.14f, "正在请求 Root 授权...")
                 val rootGranted = withContext(Dispatchers.IO) {
                     Shell.getShell()
                     var granted = false
                     for (attempt in 0 until 8) {
                         granted = Shell.isAppGrantedRoot() == true
                         if (granted) break
-                        Thread.sleep(250)
+                        Thread.sleep(180)
                     }
                     granted
                 }
@@ -617,7 +655,47 @@ class MainActivity : ComponentActivity() {
                     return@launch
                 }
 
-                updateStartupProgress(0.36f, "Root 已授权，正在连接后端服务...")
+                updateStartupProgress(0.26f, "正在识别 Root 管理器...")
+                val rootManager = withContext(Dispatchers.IO) { detectRootManager() }
+                if (rootManager == null) {
+                    startupStatusText.value = "未识别到 KernelSU、APatch 或 Magisk 管理器。"
+                    startupProgress.floatValue = 0f
+                    startupCanRetry.value = true
+                    return@launch
+                }
+
+                updateStartupProgress(0.34f, "正在检查内置后端和 META 模块包...")
+                val preflight = withContext(Dispatchers.IO) {
+                    StartupPreflightResult(
+                        rootManager = rootManager,
+                        hasBackendPackage = hasAsset("RKF.zip"),
+                        hasMagicMountPackage = hasAsset(StartupMetaModule.MagicMount.assetPath),
+                        hasOverlayFsPackage = hasAsset(StartupMetaModule.OverlayFs.assetPath),
+                        workDirWritable = filesDir.exists() && filesDir.canWrite(),
+                    )
+                }
+                when {
+                    !preflight.hasBackendPackage -> {
+                        startupStatusText.value = "未找到内置后端模块包 RKF.zip。"
+                        startupProgress.floatValue = 0f
+                        startupCanRetry.value = true
+                        return@launch
+                    }
+                    !preflight.hasMagicMountPackage || !preflight.hasOverlayFsPackage -> {
+                        startupStatusText.value = "未找到内置 META 模块包，请重新安装应用。"
+                        startupProgress.floatValue = 0f
+                        startupCanRetry.value = true
+                        return@launch
+                    }
+                    !preflight.workDirWritable -> {
+                        startupStatusText.value = "本地工作目录不可写。"
+                        startupProgress.floatValue = 0f
+                        startupCanRetry.value = true
+                        return@launch
+                    }
+                }
+
+                updateStartupProgress(0.44f, "Root 管理器 ${preflight.rootManager} 已就绪，正在连接后端服务...")
                 val backendReady = prepareBackendBeforeWizardContinue()
                 if (!backendReady || readyFileSystemManager == null) {
                     startupStatusText.value = backendInitializationFailed ?: "后端初始化失败，请重试。"
@@ -788,26 +866,27 @@ class MainActivity : ComponentActivity() {
     }
 
     fun onAidlConnected(fileSystemManager: FileSystemManager) {
-        updateStartupProgress(0.58f, "正在连接文件系统服务")
+        updateStartupProgress(0.52f, "正在连接文件系统服务")
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                updateStartupProgress(0.64f, "正在准备后端工具")
-                Shell.cmd("cd $filesDir").exec()
-                updateStartupProgress(0.68f, "正在准备分区工具")
-                copyNativeBinary("lptools_static") // v20220825
-                copyNativeBinary("httools_static") // v3.2.0
+                updateStartupProgress(0.60f, "正在准备后端工具")
+                val executableFiles = mutableListOf<File>()
+                updateStartupProgress(0.66f, "正在准备分区工具")
+                executableFiles += copyNativeBinary("lptools_static") // v20220825
+                executableFiles += copyNativeBinary("httools_static") // v3.2.0
                 updateStartupProgress(0.74f, "正在准备刷写工具")
-                copyNativeBinary("magiskboot") // v29.0
-                copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
+                executableFiles += copyNativeBinary("magiskboot") // v29.0
+                executableFiles += copyNativeBinary("bootctl") // aosp_arm64-img-13613025 android14
                 updateStartupProgress(0.82f, "正在准备 BusyBox")
-                copyNativeBinary("busybox") // BusyBox v1.36.1.1
-                updateStartupProgress(0.88f, "正在准备脚本")
-                copyAsset("mkbootfs")
-                copyAsset("ksuinit")
-                copyAsset("payload-dumper-go")
-                copyAsset("flash_ak3.sh")
-                copyAsset("flash_ak3_mkbootfs.sh")
-                updateStartupProgress(0.96f, "即将进入主页")
+                executableFiles += copyNativeBinary("busybox") // BusyBox v1.36.1.1
+                updateStartupProgress(0.88f, "正在准备脚本和解包工具")
+                executableFiles += copyAsset("mkbootfs")
+                executableFiles += copyAsset("ksuinit")
+                executableFiles += copyAsset("payload-dumper-go")
+                executableFiles += copyAsset("flash_ak3.sh")
+                executableFiles += copyAsset("flash_ak3_mkbootfs.sh")
+                chmodExecutables(executableFiles.distinctBy { it.absolutePath })
+                updateStartupProgress(0.96f, "后端服务和刷写工具已就绪")
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 withContext(Dispatchers.Main) {
@@ -833,22 +912,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun fadeToContent(render: () -> Unit) {
-        val decor = window.decorView
-        decor.animate().cancel()
-        decor.animate()
-            .alpha(0f)
-            .setDuration(180L)
-            .withEndAction {
-                render()
-                decor.alpha = 0f
-                decor.animate()
-                    .alpha(1f)
-                    .setDuration(320L)
-                    .start()
-            }
-            .start()
-    }
 
     private fun showMainContent(fileSystemManager: FileSystemManager) {
         setContent {
