@@ -18,3 +18,19 @@ model/
 payload-dumper-go
 *.jks
 keystore.properties
+
+# SSH Keys
+*.pub
+*.pem
+*.key
+id_*
+.ssh/
+
+# Environment
+.env
+.env.*
+
+# Credentials
+credentials
+*.cred
+*.secret
