@@ -519,15 +519,6 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
-                        if (firstRun) {
-                            Spacer(Modifier.height(18.dp))
-                            Text(
-                                text = "支持 AK3 ZIP、分区镜像、KernelSU LKM、A/B 无缝更新、Payload-Dumper 解包，并可自动禁用/隐藏 AVB2.0 校检。",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
                         Spacer(Modifier.height(24.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),

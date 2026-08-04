@@ -229,7 +229,7 @@ class SlotViewModel(
                 _slotInfo.value.ramdiskInfo.ramdiskLocation = "boot.img"
                 _slotInfo.value.ramdiskInfo.ramdiskFmt = "lz4_legacy"
             }
-            _error = "Unable to generate SHA1 hash. Invalid boot.img or magiskboot unpack failed!"
+            Log.w(TAG, "Unable to generate SHA1 hash. Invalid boot.img or magiskboot unpack failed.")
         }
         Shell.cmd("$magiskboot cleanup").exec()
 
