@@ -408,78 +408,6 @@ class MainActivity : ComponentActivity() {
         RootService.bind(intent, AidlConnection())
     }
 
-    private fun startBackendInitialization(showLoading: Boolean, openMainWhenReady: Boolean) {
-        readyFileSystemManager?.let { readyManager ->
-            if (openMainWhenReady) {
-                backendInitializationFailed = null
-                startupProgress.floatValue = 1f
-                startupStatusText.value = "初始化完成"
-                notifyBackendReady(true)
-                enterMainAfterStartup(readyManager)
-            }
-            return
-        }
-
-        openMainWhenBackendReady = openMainWhenBackendReady || openMainWhenReady
-        if (backendInitializationStarted) {
-            return
-        }
-        backendInitializationStarted = true
-        backendInitializationFailed = null
-
-        if (showLoading) {
-            startupProgress.floatValue = 0.08f
-            startupStatusText.value = "正在检测依赖"
-            showStartupLoading()
-        }
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                updateStartupProgress(0.18f, "正在初始化 Shell")
-                Shell.getShell()
-                updateStartupProgress(0.34f, "正在确认 Root 授权")
-                val rootGranted = Shell.isAppGrantedRoot() == true
-                withContext(Dispatchers.Main) {
-                    if (rootGranted) {
-                        startBackendAfterRootGranted(openMainWhenReady)
-                    } else {
-                        backendInitializationStarted = false
-                        backendInitializationFailed = getString(R.string.root_required)
-                        notifyBackendReady(false)
-                        if (openMainWhenReady || openMainWhenBackendReady) {
-                            showStartupError(getString(R.string.root_required))
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, e.message, e)
-                withContext(Dispatchers.Main) {
-                    backendInitializationStarted = false
-                    backendInitializationFailed = e.message ?: getString(R.string.root_required)
-                    notifyBackendReady(false)
-                    if (openMainWhenReady || openMainWhenBackendReady) {
-                        showStartupError(e.message ?: getString(R.string.root_required))
-                    }
-                }
-            }
-        }
-    }
-
-    private fun completeFirstRunWizard() {
-        openMainWhenBackendReady = true
-        readyFileSystemManager?.let { readyManager ->
-            enterMainAfterStartup(readyManager)
-            return
-        }
-        if (!backendInitializationStarted) {
-            startBackendInitialization(showLoading = false, openMainWhenReady = true)
-        }
-    }
-
-    private fun showStartupLoading() {
-        showLauncherStartup(firstRun = false)
-    }
-
-
     private fun showLauncherStartup(firstRun: Boolean) {
         setContent {
             KernelFlasherTheme {
@@ -794,11 +722,6 @@ class MainActivity : ComponentActivity() {
         readyFileSystemManager?.let { readyManager ->
             enterMainAfterStartup(readyManager)
         } ?: runLauncherStartupChecks(firstRun = false)
-    }
-
-    private fun showRootRequiredWizard() {
-        showLauncherStartup(firstRun = true)
-        runLauncherStartupChecks(firstRun = true)
     }
 
     private fun showStartupError(message: String) {
