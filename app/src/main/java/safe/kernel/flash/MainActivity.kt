@@ -117,7 +117,6 @@ import safe.kernel.flash.ui.screens.main.LanguageSettingsContent
 import safe.kernel.flash.ui.screens.main.LogSettingsContent
 import safe.kernel.flash.ui.screens.main.AdvancedSettingsContent
 import safe.kernel.flash.ui.screens.repo.RepoContent
-import safe.kernel.flash.ui.screens.wizard.WizardScreen
 import safe.kernel.flash.ui.screens.reboot.RebootContent
 import safe.kernel.flash.ui.screens.reboot.RebootViewModel
 import safe.kernel.flash.ui.screens.slot.SlotContent
@@ -485,11 +484,20 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = if (firstRun) "Root · Backend Module · Flash Tools" else "Root · Backend · Flash Tools",
+                            text = if (firstRun) "Root · 后端模块 · 刷写工具" else "Root · 后端 · 刷写工具",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
+                        if (firstRun) {
+                            Spacer(Modifier.height(18.dp))
+                            Text(
+                                text = "需要刷写后端模块后，这些功能才会完整可用。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         Spacer(Modifier.height(24.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -525,22 +533,48 @@ class MainActivity : ComponentActivity() {
                         } else if (showModuleChoice) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
+                                Text(
+                                    text = "请选择一种后端模块刷写方案：",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium
+                                )
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Button(
                                         enabled = !installingModule,
                                         onClick = { installFirstRunBackendModule(StartupMetaModule.MagicMount) }
                                     ) {
-                                        Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.MagicMount) "安装中" else "MagicMountRS")
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.MagicMount) "安装中" else "MagicMountRS")
+                                            Text(
+                                                text = "重定向方案",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                                            )
+                                        }
                                     }
                                     Button(
                                         enabled = !installingModule,
                                         onClick = { installFirstRunBackendModule(StartupMetaModule.OverlayFs) }
                                     ) {
-                                        Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.OverlayFs) "安装中" else "Meta-OverlayFS")
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.OverlayFs) "安装中" else "Meta-OverlayFS")
+                                            Text(
+                                                text = "挂载方案",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                                            )
+                                        }
                                     }
                                 }
+                                Text(
+                                    text = "刷写后端模块后，启动后的工具、解包和刷写能力才会完整生效。",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Medium
+                                )
                                 OutlinedButton(
                                     enabled = !installingModule,
                                     onClick = { finishFirstRunStartup() }
@@ -694,23 +728,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showRootRequiredWizard() {
-        setContent {
-            KernelFlasherTheme {
-                val navController = rememberNavController()
-                NavHost(navController, startDestination = "wizard") {
-                    composable("wizard") {
-                        WizardScreen(
-                            navController = navController,
-                            onDependenciesReady = {
-                                prepareBackendBeforeWizardContinue()
-                            },
-                            onComplete = { completeFirstRunWizard() }
-                        )
-                    }
-                    composable("main") { ErrorScreen(stringResource(R.string.root_required)) }
-                }
-            }
-        }
+        showLauncherStartup(firstRun = true)
+        runLauncherStartupChecks(firstRun = true)
     }
 
     private fun showStartupError(message: String) {
@@ -1244,7 +1263,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         composable("wizard") {
-                            WizardScreen(navController)
+                            LaunchedEffect(Unit) {
+                                getSharedPreferences("wizard", 0)
+                                    .edit().putInt("version", 0).commit()
+                                showLauncherStartup(firstRun = true)
+                                runLauncherStartupChecks(firstRun = true)
+                            }
                         }
                         composable("toolbox") {
                             RefreshableScreen(mainViewModel, navController) {
