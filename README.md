@@ -1,4 +1,4 @@
-# Kernel Flasher
+# ReKernelFlasher
 Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复 Android 内核镜像。
 基于 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 二次开发，由 [Bacillusf](https://github.com/Bacillusf) 维护。
 <!-- 右侧悬浮SVG图标，width控制图标大小，align="right"实现文字环绕 -->
