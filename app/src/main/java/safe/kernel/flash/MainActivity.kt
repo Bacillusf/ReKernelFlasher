@@ -1,16 +1,20 @@
 package safe.kernel.flash
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.IBinder
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.util.Log
 import android.view.Window
 import androidx.activity.ComponentActivity
@@ -242,6 +246,7 @@ private fun rememberRkfMainPagerState(
 class MainActivity : ComponentActivity() {
     companion object {
         const val TAG: String = "MainActivity"
+        private const val REQUEST_CODE_NOTIFICATIONS = 4101
         init {
             Shell.setDefaultBuilder(Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER))
         }
@@ -262,6 +267,7 @@ class MainActivity : ComponentActivity() {
     private var viewModel: MainViewModel? = null
     private lateinit var mainListener: MainListener
     var isAwaitingResult = false
+    private var startupPermissionsRequested: Boolean = false
 
     inner class AidlConnection : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -545,6 +551,25 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun requestStartupPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_CODE_NOTIFICATIONS)
+        } else {
+            launchAllFilesAccessSettingsIfNeeded()
+        }
+    }
+
+    private fun launchAllFilesAccessSettingsIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            runCatching { startActivity(intent) }
         }
     }
 
@@ -1433,10 +1458,25 @@ class MainActivity : ComponentActivity() {
 
     public override fun onResume() {
         super.onResume()
+        if (!startupPermissionsRequested) {
+            startupPermissionsRequested = true
+            requestStartupPermissions()
+        }
         if (this::mainListener.isInitialized) {
             if (!isAwaitingResult) {
                 mainListener.resume()
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_NOTIFICATIONS) {
+            launchAllFilesAccessSettingsIfNeeded()
         }
     }
 }

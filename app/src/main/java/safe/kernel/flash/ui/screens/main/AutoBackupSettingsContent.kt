@@ -19,9 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +49,10 @@ fun ColumnScope.AutoBackupSettingsContent(
     navController: NavController
 ) {
     val context = LocalContext.current
+    val hasAllFilesAccess = if (Build.VERSION.SDK_INT >= 30) {
+        Environment.isExternalStorageManager()
+    } else true
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SettingRow(
             title = stringResource(R.string.auto_backup),
@@ -61,6 +65,35 @@ fun ColumnScope.AutoBackupSettingsContent(
                 )
             }
         )
+
+        Text(
+            text = "开启后，每次刷写分区镜像或 AnyKernel3 之前，会自动用 dd 备份目标分区，防止刷错后无法恢复。\n" +
+                "备份保存在 /sdcard/ReKernelFlasher/Autobackup/，可在「查看自动备份记录」中查看，长按记录可打开对应备份镜像。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+        )
+
+        if (!hasAllFilesAccess) {
+            ListItem(
+                title = "未授权必要权限",
+                subtitle = "缺少「所有文件访问」权限，自动备份可能无法正常访问 /sdcard，点击前往系统设置授权",
+                leadingIcon = Icons.Filled.WarningAmber,
+                leadingColors = ListItemIconColors(
+                    container = MaterialTheme.colorScheme.errorContainer,
+                    content = MaterialTheme.colorScheme.onErrorContainer
+                ),
+                onClick = {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    runCatching { context.startActivity(intent) }
+                }
+            )
+        }
+
         if (AutoBackupManager.isEnabled.value) {
             ListItem(
                 title = stringResource(R.string.view_autobackup_records),
@@ -74,47 +107,6 @@ fun ColumnScope.AutoBackupSettingsContent(
             )
         }
     }
-
-    Spacer(Modifier.height(20.dp))
-    val hasPermission = if (Build.VERSION.SDK_INT >= 30) {
-        Environment.isExternalStorageManager()
-    } else true
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ListItem(
-            title = stringResource(R.string.storage_permission),
-            subtitle = if (hasPermission) "已授权" else "未授权，点击下方按钮前往设置",
-            leadingIcon = Icons.Filled.Folder,
-            leadingColors = ListItemIconColors(
-                container = if (hasPermission)
-                    MaterialTheme.colorScheme.primaryContainer
-                else
-                    MaterialTheme.colorScheme.errorContainer,
-                content = if (hasPermission)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onErrorContainer
-            ),
-            onClick = {}
-        )
-        if (!hasPermission) {
-            ListItem(
-                title = stringResource(R.string.grant_storage_permission),
-                subtitle = "前往系统设置开启所有文件访问权限",
-                leadingIcon = Icons.Filled.Storage,
-                leadingColors = ListItemIconColors(
-                    container = MaterialTheme.colorScheme.errorContainer,
-                    content = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                onClick = {
-                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                    }
-                    context.startActivity(intent)
-                }
-            )
-        }
-    }
 }
 
 @Composable
@@ -124,7 +116,7 @@ private fun SettingRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     trailing: @Composable () -> Unit
 ) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
