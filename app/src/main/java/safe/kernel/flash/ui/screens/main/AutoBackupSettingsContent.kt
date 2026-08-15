@@ -66,15 +66,18 @@ fun ColumnScope.AutoBackupSettingsContent(
             }
         )
 
-        Text(
-            text = "开启后，每次刷写分区镜像或 AnyKernel3 之前，会自动用 dd 备份目标分区，防止刷错后无法恢复。\n" +
-                "备份保存在 /sdcard/ReKernelFlasher/Autobackup/，可在「查看自动备份记录」中查看，长按记录可打开对应备份镜像。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-        )
+        if (AutoBackupManager.isEnabled.value) {
+            ListItem(
+                title = stringResource(R.string.view_autobackup_records),
+                subtitle = "查看历史自动备份",
+                leadingIcon = Icons.Filled.History,
+                leadingColors = ListItemIconColors(
+                    container = MaterialTheme.colorScheme.tertiaryContainer,
+                    content = MaterialTheme.colorScheme.onTertiaryContainer
+                ),
+                onClick = { navController.navigate("autobackup") }
+            )
+        }
 
         if (!hasAllFilesAccess) {
             ListItem(
@@ -94,18 +97,15 @@ fun ColumnScope.AutoBackupSettingsContent(
             )
         }
 
-        if (AutoBackupManager.isEnabled.value) {
-            ListItem(
-                title = stringResource(R.string.view_autobackup_records),
-                subtitle = "查看历史自动备份",
-                leadingIcon = Icons.Filled.History,
-                leadingColors = ListItemIconColors(
-                    container = MaterialTheme.colorScheme.tertiaryContainer,
-                    content = MaterialTheme.colorScheme.onTertiaryContainer
-                ),
-                onClick = { navController.navigate("autobackup") }
-            )
-        }
+        Text(
+            text = "开启后，每次刷写分区镜像或 AnyKernel3 之前，会自动用 dd 备份目标分区，防止刷错后无法恢复。\n" +
+                "备份保存在 /sdcard/ReKernelFlasher/Autobackup/，可在「查看自动备份记录」中查看，长按记录可打开对应备份镜像。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+        )
     }
 }
 
