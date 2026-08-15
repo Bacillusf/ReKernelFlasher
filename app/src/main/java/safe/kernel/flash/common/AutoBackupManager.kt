@@ -8,6 +8,7 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import safe.kernel.flash.common.types.autobackup.AutoBackupItem
 import safe.kernel.flash.common.types.autobackup.AutoBackupRecord
 import java.io.File
 import java.util.Base64
@@ -87,6 +88,54 @@ object AutoBackupManager {
         }
     }
 
+    /**
+     * Backs up `boot` and `dtbo` into a single timestamped directory before flashing an
+     * AnyKernel3 zip. Returns the backup timestamp (directory name) used for rollback, or `null`
+     * when auto backup is disabled or nothing could be backed up.
+     */
+    @SuppressLint("SdCardPath")
+    fun backupAk3(context: Context, slotSuffix: String): Long? {
+        if (!isEnabled.value) {
+            Log.d(TAG, "Auto backup disabled, skipping AK3 backup")
+            return null
+        }
+        try {
+            val timestamp = System.currentTimeMillis() / 1000
+            val dirPath = "$BACKUP_DIR/$timestamp"
+            Shell.cmd("mkdir -p $dirPath").exec()
+
+            val items = mutableListOf<AutoBackupItem>()
+            for (partitionName in listOf("boot", "dtbo")) {
+                val blockDevice = PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)
+                if (blockDevice == null || !blockDevice.exists()) {
+                    Log.w(TAG, "Skip $partitionName$slotSuffix: block device not found")
+                    continue
+                }
+                val imgPath = "$dirPath/${partitionName}${slotSuffix}.img"
+                val result = Shell.cmd("dd if=$blockDevice of=$imgPath bs=4096 && sync").exec()
+                if (!result.isSuccess) {
+                    Log.e(TAG, "dd failed for $partitionName: ${result.err.joinToString("\n")}")
+                    continue
+                }
+                Shell.cmd("chmod 644 $imgPath").exec()
+                items.add(AutoBackupItem(partitionName, slotSuffix, blockDevice.absolutePath, imgPath))
+            }
+
+            if (items.isEmpty()) {
+                Shell.cmd("rm -rf $dirPath").exec()
+                Log.e(TAG, "AK3 auto backup produced no images")
+                return null
+            }
+
+            addToSummary(AutoBackupRecord.createAk3(timestamp, items))
+            Log.d(TAG, "AK3 auto backup success: $dirPath (${items.size} partitions)")
+            return timestamp
+        } catch (e: Exception) {
+            Log.e(TAG, "AK3 auto backup failed: ${e.message}", e)
+            return null
+        }
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun addToSummary(record: AutoBackupRecord) {
         try {
@@ -113,6 +162,69 @@ object AutoBackupManager {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read summary: ${e.message}", e)
             emptyList()
+        }
+    }
+
+    /**
+     * Restores the partition image(s) associated with the given backup [timestamp]. For a plain
+     * image backup this is a single partition; for an AK3 backup it restores every item (boot +
+     * dtbo). Returns `true` only when every item was flashed back successfully.
+     */
+    @SuppressLint("SdCardPath")
+    fun rollback(context: Context, timestamp: Long): Boolean {
+        try {
+            val record = getRecords().firstOrNull { it.timestamp == timestamp }
+            if (record == null) {
+                Log.e(TAG, "No auto backup record for timestamp $timestamp")
+                return false
+            }
+
+            val items = when (record.kind) {
+                AutoBackupRecord.KIND_AK3 -> record.items
+                else -> listOf(AutoBackupItem(record.partition, record.slot, "", record.path))
+            }.filter { it.partition.isNotEmpty() && it.path.isNotEmpty() }
+
+            if (items.isEmpty()) {
+                Log.e(TAG, "No items to rollback for timestamp $timestamp")
+                return false
+            }
+
+            var success = true
+            for (item in items) {
+                val targetPath = if (item.source.isNotEmpty()) {
+                    item.source
+                } else {
+                    PartitionUtil.findPartitionBlockDevice(context, item.partition, item.slot)?.absolutePath
+                }
+                if (targetPath.isNullOrEmpty()) {
+                    Log.e(TAG, "Rollback: block device not found for ${item.partition}${item.slot}")
+                    success = false
+                    continue
+                }
+                val targetExists = Shell.cmd("test -e $targetPath && echo yes").exec().out.firstOrNull() == "yes"
+                if (!targetExists) {
+                    Log.e(TAG, "Rollback: target device missing $targetPath")
+                    success = false
+                    continue
+                }
+                val exists = Shell.cmd("test -f ${item.path} && echo yes").exec().out.firstOrNull() == "yes"
+                if (!exists) {
+                    Log.e(TAG, "Rollback: backup image missing ${item.path}")
+                    success = false
+                    continue
+                }
+                val result = Shell.cmd("dd if=${item.path} of=$targetPath bs=4096 && sync").exec()
+                if (!result.isSuccess) {
+                    Log.e(TAG, "Rollback dd failed for ${item.partition}${item.slot}: ${result.err.joinToString("\n")}")
+                    success = false
+                } else {
+                    Log.d(TAG, "Rollback restored ${item.partition}${item.slot}")
+                }
+            }
+            return success
+        } catch (e: Exception) {
+            Log.e(TAG, "Rollback failed: ${e.message}", e)
+            return false
         }
     }
 }

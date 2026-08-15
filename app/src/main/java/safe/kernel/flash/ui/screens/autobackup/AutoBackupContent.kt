@@ -8,11 +8,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -35,6 +42,7 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import safe.kernel.flash.common.types.autobackup.AutoBackupRecord
+import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -47,6 +55,7 @@ fun AutoBackupContent(
     @Suppress("UNUSED_PARAMETER") navController: NavController
 ) {
     val context = LocalContext.current
+    var pendingRollback by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     var pendingFile by remember { mutableStateOf<File?>(null) }
@@ -75,7 +84,12 @@ fun AutoBackupContent(
             modifier = Modifier.fillMaxWidth().combinedClickable(
                 onClick = {},
                     onLongClick = {
-                        val file = File(record.path)
+                        val path = record.path
+                        if (path.isEmpty()) {
+                            Toast.makeText(context, "该记录为多分区备份，请使用回滚", Toast.LENGTH_SHORT).show()
+                            return@combinedClickable
+                        }
+                        val file = File(path)
                         if (!file.exists()) {
                             Toast.makeText(context, "文件不存在", Toast.LENGTH_SHORT).show()
                             return@combinedClickable
@@ -90,15 +104,56 @@ fun AutoBackupContent(
             val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日HH时mm分ss秒")
                 .withZone(ZoneId.systemDefault())
             val timeStr = formatter.format(Instant.ofEpochSecond(record.timestamp))
-            Text(text = timeStr, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp))
-            Text(text = "auto-backup ${record.partition}${record.slot} stored in ${record.path}",
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 14.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp),
-                overflow = TextOverflow.Visible)
+            Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp)) {
+                Text(text = timeStr, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = recordDescription(record),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 14.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 2.dp),
+                    overflow = TextOverflow.Visible)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { pendingRollback = record.timestamp },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Text(text = "回滚", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
         }
+    }
+
+    AnimatedConfirmDialog(
+        visible = pendingRollback != null,
+        title = "回滚",
+        message = "确定要恢复该备份对应的分区吗？将把备份镜像刷回原分区。",
+        confirmText = "回滚",
+        cancelText = "取消",
+        destructive = true,
+        onConfirm = {
+            val timestamp = pendingRollback
+            pendingRollback = null
+            timestamp?.let { viewModel.rollback(context, it) {} }
+        },
+        onDismiss = { pendingRollback = null }
+    )
+}
+
+private fun recordDescription(record: AutoBackupRecord): String {
+    return if (record.kind == AutoBackupRecord.KIND_AK3) {
+        record.items.joinToString("\n") { "${it.source} -> ${it.path}" }
+    } else {
+        "auto-backup ${record.partition}${record.slot} stored in ${record.path}"
     }
 }
 

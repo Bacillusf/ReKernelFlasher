@@ -7,12 +7,21 @@ import java.time.format.DateTimeFormatter
 @Serializable
 data class HistoryEntry(
     val timestamp: String,
-    val description: String
+    val description: String,
+    val kind: String = KIND_NORMAL,
+    val rollbackTimestamp: Long = -1L
 ) {
     companion object {
-        fun create(description: String): HistoryEntry {
-            val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日HH时"))
-            return HistoryEntry(now, description)
-        }
+        const val KIND_NORMAL = "normal"
+        const val KIND_AK3 = "ak3"
+
+        fun create(description: String): HistoryEntry =
+            HistoryEntry(now(), description)
+
+        fun createAk3(description: String, rollbackTimestamp: Long): HistoryEntry =
+            HistoryEntry(now(), description, KIND_AK3, rollbackTimestamp)
+
+        private fun now(): String =
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日HH时"))
     }
 }

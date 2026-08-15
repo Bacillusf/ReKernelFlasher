@@ -763,7 +763,7 @@ class SlotViewModel(
         if (!isActive) {
             resetSlot()
         }
-        AutoBackupManager.backup(context, "boot", slotSuffix)
+        val ak3BackupTimestamp = AutoBackupManager.backupAk3(context, slotSuffix)
         val zip = File(context.filesDir.canonicalPath, flashFilename!!)
         _checkZip(context, zip)
         try {
@@ -781,7 +781,7 @@ class SlotViewModel(
                     _wasFlashSuccess.value = true
                     val modeLabel = if (type == "_mkbootfs") " (mkbootfs)" else ""
                     val srcPath = resolveSourcePath(flashUri)
-                    HistoryManager.record(HistoryEntry.create("刷写 $srcPath -> ${boot.absolutePath}$modeLabel"))
+                    HistoryManager.record(HistoryEntry.createAk3("刷入 $srcPath -> ${boot.absolutePath}$modeLabel", ak3BackupTimestamp ?: -1L))
                 } else {
                     log(context, "Failed to flash zip", shouldThrow = false)
 //                    Log.e(TAG, "Error: ${result.stderr.joinToString("\n")}")

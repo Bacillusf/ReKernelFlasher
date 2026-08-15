@@ -1,19 +1,30 @@
 package safe.kernel.flash.ui.screens.history
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -23,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import safe.kernel.flash.R
+import safe.kernel.flash.common.types.history.HistoryEntry
+import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.ListItem
 import safe.kernel.flash.ui.components.ListItemIconColors
@@ -36,6 +49,9 @@ fun ColumnScope.HistoryContent(
     viewModel: HistoryViewModel,
     navController: NavController
 ) {
+    val context = LocalContext.current
+    var pendingRollback by remember { mutableStateOf<Long?>(null) }
+
     DataCard(title = stringResource(R.string.operation_history))
 
     if (viewModel.isEmpty) {
@@ -78,6 +94,25 @@ fun ColumnScope.HistoryContent(
                         modifier = Modifier.fillMaxWidth(),
                         overflow = TextOverflow.Visible
                     )
+                    if (entry.kind == HistoryEntry.KIND_AK3 && entry.rollbackTimestamp > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = { pendingRollback = entry.rollbackTimestamp },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            ) {
+                                Text(text = "回滚", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -96,4 +131,19 @@ fun ColumnScope.HistoryContent(
             onClick = { viewModel.clearAll() }
         )
     }
+
+    AnimatedConfirmDialog(
+        visible = pendingRollback != null,
+        title = "回滚",
+        message = "确定要恢复该操作对应的备份分区吗？将把备份镜像刷回原分区。",
+        confirmText = "回滚",
+        cancelText = stringResource(R.string.cancel),
+        destructive = true,
+        onConfirm = {
+            val timestamp = pendingRollback
+            pendingRollback = null
+            timestamp?.let { viewModel.rollback(context, it) {} }
+        },
+        onDismiss = { pendingRollback = null }
+    )
 }
