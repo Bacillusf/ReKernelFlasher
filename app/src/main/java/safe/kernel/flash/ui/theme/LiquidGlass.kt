@@ -1,5 +1,6 @@
 package safe.kernel.flash.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 
 /**
  * KSU-style liquid-glass surface for floating chrome.
@@ -71,3 +74,23 @@ fun Modifier.gradientBackground(
     end: Offset = Offset.Infinite,
     shape: Shape = RectangleShape
 ): Modifier = background(Brush.linearGradient(colors = colors, start = start, end = end), shape)
+
+/**
+ * Whether the liquid-glass stack is usable on the current device.
+ *
+ * The miuix-blur library declares `minSdkVersion = 33` and its backdrop layer relies on
+ * [android.graphics.RuntimeShader] (API 33) and RenderEffect-based blur (API 31). Calling any of
+ * `rememberLayerBackdrop` / `layerBackdrop` / `drawBackdrop` below Android 13 crashes at runtime,
+ * so every glass surface must fall back to a plain surface on older builds.
+ */
+object LiquidGlassSupport {
+    val isSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+}
+
+/**
+ * Applies the miuix [layerBackdrop] only when [backdrop] is available; on devices where the
+ * liquid-glass stack is unsupported the caller passes `null` and this becomes a no-op, letting the
+ * content render on a plain surface.
+ */
+fun Modifier.optionalLayerBackdrop(backdrop: LayerBackdrop?): Modifier =
+    if (backdrop != null) this.layerBackdrop(backdrop) else this

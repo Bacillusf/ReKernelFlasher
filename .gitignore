@@ -34,3 +34,6 @@ id_*
 credentials
 *.cred
 *.secret
+
+# Outputs
+*.apk

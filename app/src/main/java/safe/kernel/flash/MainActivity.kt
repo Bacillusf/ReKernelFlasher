@@ -133,6 +133,8 @@ import safe.kernel.flash.ui.screens.toolbox.UnpackHubContent
 import safe.kernel.flash.ui.screens.toolbox.DiagPortContent
 import safe.kernel.flash.ui.screens.toolbox.RkpFixContent
 import safe.kernel.flash.ui.theme.KernelFlasherTheme
+import safe.kernel.flash.ui.theme.LiquidGlassSupport
+import safe.kernel.flash.ui.theme.optionalLayerBackdrop
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
@@ -148,7 +150,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.math.abs
-import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import kotlin.system.exitProcess
 
@@ -1046,10 +1048,12 @@ class MainActivity : ComponentActivity() {
                         val wizardDone = lastWizardVersion >= BuildConfig.VERSION_CODE
                         val startDest = if (wizardDone) "main" else "wizard"
                         val floatingNavBackground = MaterialTheme.colorScheme.background
-                        val floatingNavBackdrop = rememberLayerBackdrop {
-                            drawRect(floatingNavBackground)
-                            drawContent()
-                        }
+                        val floatingNavBackdrop: LayerBackdrop? = if (LiquidGlassSupport.isSupported) {
+                            rememberLayerBackdrop {
+                                drawRect(floatingNavBackground)
+                                drawContent()
+                            }
+                        } else null
                         @Composable
                         fun MainTabPager() {
                             val currentPage = mainPagerState.pagerState.currentPage
@@ -1060,7 +1064,7 @@ class MainActivity : ComponentActivity() {
                                 state = mainPagerState.pagerState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .layerBackdrop(floatingNavBackdrop),
+                                    .optionalLayerBackdrop(floatingNavBackdrop),
                                 beyondViewportPageCount = 1,
                                 userScrollEnabled = true,
                             ) { page ->
@@ -1120,7 +1124,7 @@ class MainActivity : ComponentActivity() {
                                     startDestination = startDest,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .layerBackdrop(floatingNavBackdrop)
+                                        .optionalLayerBackdrop(floatingNavBackdrop)
                                 ) {
                                     composable("main") {
                                         MainTabPager()

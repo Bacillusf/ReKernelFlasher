@@ -37,7 +37,7 @@ fun GlassNavigationBar(
     items: List<NavItem>,
     currentRoute: String?,
     onItemClick: (NavItem) -> Unit,
-    backdrop: Backdrop,
+    backdrop: Backdrop?,
     modifier: Modifier = Modifier
 ) {
     val routeSelectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
