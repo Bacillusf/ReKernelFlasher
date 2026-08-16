@@ -64,7 +64,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -149,10 +148,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.ExperimentalSerializationApi
 import java.io.File
-import kotlin.coroutines.resume
 import kotlin.math.abs
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -162,23 +159,6 @@ object SharedViewModels {
     @OptIn(ExperimentalSerializationApi::class)
     lateinit var mainViewModel: MainViewModel
 }
-
-private enum class StartupMetaModule(
-    val displayName: String,
-    val assetPath: String,
-    val fileName: String,
-) {
-    MagicMount("MagicMountRS", "model/magic_mount_rs.zip", "magic_mount_rs.zip"),
-    OverlayFs("Meta-OverlayFS", "model/overlayfs.zip", "overlayfs.zip"),
-}
-
-private data class StartupPreflightResult(
-    val rootManager: String,
-    val hasBackendPackage: Boolean,
-    val hasMagicMountPackage: Boolean,
-    val hasOverlayFsPackage: Boolean,
-    val workDirWritable: Boolean,
-)
 
 private class RkfMainPagerState(
     val pagerState: PagerState,
@@ -256,11 +236,7 @@ class MainActivity : ComponentActivity() {
     private var backendInitializationStarted: Boolean = false
     private val startupProgress = mutableFloatStateOf(0.08f)
     private val startupStatusText = mutableStateOf("正在检测依赖")
-    private val backendReadyCallbacks = mutableListOf<(Boolean) -> Unit>()
     private val startupCanRetry = mutableStateOf(false)
-    private val startupFirstRunModuleChoice = mutableStateOf(false)
-    private val startupIsInstallingModule = mutableStateOf(false)
-    private val startupSelectedMetaModule = mutableStateOf<StartupMetaModule?>(null)
     private var backendInitializationFailed: String? = null
     private var openMainWhenBackendReady: Boolean = false
     private var readyFileSystemManager: FileSystemManager? = null
@@ -319,10 +295,6 @@ class MainActivity : ComponentActivity() {
         Shell.cmd("chmod 755 $paths").exec()
     }
 
-    private fun hasAsset(assetPath: String): Boolean = runCatching {
-        assets.open(assetPath).use { true }
-    }.getOrDefault(false)
-
     private fun detectRootManager(): String? {
         val out = Shell.cmd(
             "if [ -f /data/adb/ksud ]; then echo KernelSU; " +
@@ -354,10 +326,8 @@ class MainActivity : ComponentActivity() {
             splashScreenView.remove()
         }
 
-        val wizardDone = getSharedPreferences("wizard", 0)
-            .getInt("version", 0) >= BuildConfig.VERSION_CODE
-        showLauncherStartup(firstRun = !wizardDone)
-        runLauncherStartupChecks(firstRun = !wizardDone)
+        showLauncherStartup()
+        runLauncherStartupChecks()
     }
 
     private fun updateStartupProgress(progress: Float, status: String) {
@@ -376,31 +346,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun notifyBackendReady(success: Boolean) {
-        val callbacks = backendReadyCallbacks.toList()
-        backendReadyCallbacks.clear()
-        callbacks.forEach { it(success) }
-    }
-
-    private suspend fun prepareBackendBeforeWizardContinue(): Boolean = suspendCancellableCoroutine { continuation ->
-        lifecycleScope.launch(Dispatchers.Main) {
-            readyFileSystemManager?.let {
-                continuation.resume(true)
-                return@launch
-            }
-            backendReadyCallbacks += { success ->
-                if (continuation.isActive) continuation.resume(success)
-            }
-            startBackendAfterRootGranted(openMainWhenReady = false)
-        }
-    }
-
     private fun startBackendAfterRootGranted(openMainWhenReady: Boolean) {
         readyFileSystemManager?.let { readyManager ->
             backendInitializationFailed = null
             startupProgress.floatValue = 1f
             startupStatusText.value = "初始化完成"
-            notifyBackendReady(true)
             if (openMainWhenReady) enterMainAfterStartup(readyManager)
             return
         }
@@ -410,20 +360,18 @@ class MainActivity : ComponentActivity() {
         backendInitializationStarted = true
         backendInitializationFailed = null
         startupProgress.floatValue = 0.48f
-        startupStatusText.value = "正在连接后端服务"
+        startupStatusText.value = "检查必要权限"
         rootServiceConnected = false
         val intent = Intent(this@MainActivity, FilesystemService::class.java)
         RootService.bind(intent, AidlConnection())
     }
 
-    private fun showLauncherStartup(firstRun: Boolean) {
+    private fun showLauncherStartup() {
         setContent {
             KernelFlasherTheme {
                 val loadingProgress by startupProgress
                 val loadingStatus by startupStatusText
                 val canRetry by startupCanRetry
-                val showModuleChoice by startupFirstRunModuleChoice
-                val installingModule by startupIsInstallingModule
                 val animatedLoadingProgress by animateFloatAsState(
                     targetValue = loadingProgress,
                     animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
@@ -450,7 +398,7 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = if (firstRun) "Root · 后端模块 · 刷写工具" else "Root · 后端 · 刷写工具",
+                            text = "Root · 后端 · 刷写工具",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
@@ -480,72 +428,10 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
-                        if (canRetry || showModuleChoice) {
-                            Spacer(Modifier.height(18.dp))
-                        }
                         if (canRetry) {
-                            Button(onClick = { runLauncherStartupChecks(firstRun) }) {
+                            Spacer(Modifier.height(18.dp))
+                            Button(onClick = { runLauncherStartupChecks() }) {
                                 Text("重试")
-                            }
-                        } else if (showModuleChoice) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                Text(
-                                    text = "需要刷入后端模块以启用以下功能：",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "• 守护进程：刷写时保持应用后台运行，通知栏显示刷写状态\n" +
-                                        "• AVB2.0 工具：自动禁用 AVB 校检，防止刷写后变砖\n" +
-                                        "• 隐藏 AVB 状态：隐藏已关闭校检的痕迹",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "可选安装 META：选择重定向方案或挂载方案，也可以跳过。",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Button(
-                                        enabled = !installingModule,
-                                        onClick = { installFirstRunBackendModule(StartupMetaModule.MagicMount) }
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.MagicMount) "安装中" else "MagicMountRS")
-                                            Text(
-                                                text = "Magic Mount 重定向方案",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                                            )
-                                        }
-                                    }
-                                    Button(
-                                        enabled = !installingModule,
-                                        onClick = { installFirstRunBackendModule(StartupMetaModule.OverlayFs) }
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(if (installingModule && startupSelectedMetaModule.value == StartupMetaModule.OverlayFs) "安装中" else "Meta-OverlayFS")
-                                            Text(
-                                                text = "OverlayFS 挂载方案",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
-                                            )
-                                        }
-                                    }
-                                }
-                                OutlinedButton(
-                                    enabled = !installingModule,
-                                    onClick = { finishFirstRunStartup() }
-                                ) {
-                                    Text("跳过安装")
-                                }
                             }
                         }
                     }
@@ -573,11 +459,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun runLauncherStartupChecks(firstRun: Boolean) {
+    private fun runLauncherStartupChecks() {
         startupCanRetry.value = false
-        startupFirstRunModuleChoice.value = false
-        startupIsInstallingModule.value = false
-        startupSelectedMetaModule.value = null
         startupProgress.floatValue = 0.08f
         startupStatusText.value = "正在检查 Root 权限和后端依赖..."
         openMainWhenBackendReady = false
@@ -610,55 +493,18 @@ class MainActivity : ComponentActivity() {
                     return@launch
                 }
 
-                updateStartupProgress(0.34f, "正在检查内置后端和 META 模块包...")
-                val preflight = withContext(Dispatchers.IO) {
-                    StartupPreflightResult(
-                        rootManager = rootManager,
-                        hasBackendPackage = hasAsset("RKF.zip"),
-                        hasMagicMountPackage = hasAsset(StartupMetaModule.MagicMount.assetPath),
-                        hasOverlayFsPackage = hasAsset(StartupMetaModule.OverlayFs.assetPath),
-                        workDirWritable = filesDir.exists() && filesDir.canWrite(),
-                    )
+                updateStartupProgress(0.34f, "正在检查工作目录...")
+                val workDirWritable = withContext(Dispatchers.IO) {
+                    filesDir.exists() && filesDir.canWrite()
                 }
-                when {
-                    !preflight.hasBackendPackage -> {
-                        startupStatusText.value = "未找到内置后端模块包 RKF.zip。"
-                        startupProgress.floatValue = 0f
-                        startupCanRetry.value = true
-                        return@launch
-                    }
-                    !preflight.hasMagicMountPackage || !preflight.hasOverlayFsPackage -> {
-                        startupStatusText.value = "未找到内置 META 模块包，请重新安装应用。"
-                        startupProgress.floatValue = 0f
-                        startupCanRetry.value = true
-                        return@launch
-                    }
-                    !preflight.workDirWritable -> {
-                        startupStatusText.value = "本地工作目录不可写。"
-                        startupProgress.floatValue = 0f
-                        startupCanRetry.value = true
-                        return@launch
-                    }
-                }
-
-                updateStartupProgress(0.44f, "Root 管理器 ${preflight.rootManager} 已就绪，正在连接后端服务...")
-                val backendReady = prepareBackendBeforeWizardContinue()
-                if (!backendReady || readyFileSystemManager == null) {
-                    startupStatusText.value = backendInitializationFailed ?: "后端初始化失败，请重试。"
+                if (!workDirWritable) {
+                    startupStatusText.value = "本地工作目录不可写。"
                     startupProgress.floatValue = 0f
                     startupCanRetry.value = true
                     return@launch
                 }
 
-                startupProgress.floatValue = 1f
-                startupStatusText.value = if (firstRun) "初始化完成，请选择是否安装后端模块。" else "检查通过，正在进入..."
-                if (firstRun) {
-                    startupFirstRunModuleChoice.value = true
-                } else {
-                    readyFileSystemManager?.let { readyManager ->
-                        enterMainAfterStartup(readyManager)
-                    }
-                }
+                startBackendAfterRootGranted(openMainWhenReady = true)
             } catch (e: Exception) {
                 Log.e(TAG, e.message, e)
                 startupStatusText.value = e.message ?: "检查失败，请重试。"
@@ -666,89 +512,6 @@ class MainActivity : ComponentActivity() {
                 startupCanRetry.value = true
             }
         }
-    }
-
-    private fun installFirstRunBackendModule(metaModule: StartupMetaModule) {
-        startupIsInstallingModule.value = true
-        startupSelectedMetaModule.value = metaModule
-        startupFirstRunModuleChoice.value = false
-        startupCanRetry.value = false
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                updateStartupProgress(0.16f, "正在复制 RKF 后端模块...")
-                val backendFile = copyAssetModuleToFiles("RKF.zip", "RKF.zip")
-                updateStartupProgress(0.42f, "正在安装 RKF 后端模块...")
-                installRootModule(backendFile, "RKF 后端模块")
-                updateStartupProgress(0.62f, "正在复制 ${metaModule.displayName}...")
-                val metaFile = copyAssetModuleToFiles(metaModule.assetPath, metaModule.fileName)
-                updateStartupProgress(0.78f, "正在安装 ${metaModule.displayName}...")
-                installRootModule(metaFile, metaModule.displayName)
-                updateStartupProgress(0.9f, "正在写入后端模块配置...")
-                Shell.cmd("mkdir -p /data/adb/modules/RKF/config").exec()
-                Shell.cmd("touch /data/adb/modules/RKF/config/avb_disable").exec()
-                Shell.cmd("touch /data/adb/modules/RKF/config/avb_hide").exec()
-                withContext(Dispatchers.Main) {
-                    startupIsInstallingModule.value = false
-                    startupSelectedMetaModule.value = null
-                    finishFirstRunStartup()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, e.message, e)
-                withContext(Dispatchers.Main) {
-                    startupIsInstallingModule.value = false
-                    startupSelectedMetaModule.value = null
-                    startupFirstRunModuleChoice.value = true
-                    startupStatusText.value = "后端模块安装失败: ${e.message}"
-                    startupProgress.floatValue = 1f
-                }
-            }
-        }
-    }
-
-    private fun copyAssetModuleToFiles(assetPath: String, outputName: String): File {
-        val out = File(filesDir, outputName)
-        assets.open(assetPath).use { input ->
-            out.outputStream().use { output -> input.copyTo(output) }
-        }
-        return out
-    }
-
-    private fun installRootModule(file: File, displayName: String) {
-        try {
-            val command = detectModuleInstallCommand(file)
-                ?: throw IllegalStateException("无法识别 Root 管理器")
-            val result = Shell.cmd(command).exec()
-            if (!result.isSuccess) {
-                val message = (result.err + result.out).joinToString("\n").ifBlank { "$displayName 安装失败" }
-                throw IllegalStateException(message)
-            }
-        } finally {
-            file.delete()
-        }
-    }
-
-    private fun detectModuleInstallCommand(file: File): String? {
-        val path = file.absolutePath
-        val isKsu = Shell.cmd("test -f /data/adb/ksud && echo yes || echo no").exec().out.firstOrNull() == "yes"
-        val isApatch = Shell.cmd("test -f /data/adb/apd && echo yes || echo no").exec().out.firstOrNull() == "yes"
-        val isMagisk = Shell.cmd("test -f /data/adb/magisk/magisk && echo yes || echo no").exec().out.firstOrNull() == "yes"
-        return when {
-            isKsu -> "/data/adb/ksud module install $path"
-            isApatch -> "/data/adb/apd module install $path"
-            isMagisk -> "/data/adb/magisk/magisk --install-module $path"
-            else -> null
-        }
-    }
-
-    private fun finishFirstRunStartup() {
-        getSharedPreferences("wizard", 0)
-            .edit().putInt("version", BuildConfig.VERSION_CODE).commit()
-        startupProgress.floatValue = 1f
-        startupStatusText.value = "检查通过，正在进入..."
-        startupFirstRunModuleChoice.value = false
-        readyFileSystemManager?.let { readyManager ->
-            enterMainAfterStartup(readyManager)
-        } ?: runLauncherStartupChecks(firstRun = false)
     }
 
     private fun showStartupError(message: String) {
@@ -833,7 +596,6 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.Main) {
                     backendInitializationStarted = false
                     backendInitializationFailed = e.message ?: getString(R.string.root_required)
-                    notifyBackendReady(false)
                     if (openMainWhenBackendReady) {
                         showStartupError(e.message ?: getString(R.string.root_required))
                     }
@@ -845,7 +607,6 @@ class MainActivity : ComponentActivity() {
                 backendInitializationFailed = null
                 startupProgress.floatValue = 1f
                 startupStatusText.value = "初始化完成"
-                notifyBackendReady(true)
                 if (openMainWhenBackendReady) {
                     enterMainAfterStartup(fileSystemManager)
                 }
@@ -1068,10 +829,7 @@ class MainActivity : ComponentActivity() {
 
                     }
                     CompositionLocalProvider(LocalDensity provides scaledDensity) {
-                        val prefs = getSharedPreferences("wizard", 0)
-                        val lastWizardVersion = prefs.getInt("version", 0)
-                        val wizardDone = lastWizardVersion >= BuildConfig.VERSION_CODE
-                        val startDest = if (wizardDone) "main" else "wizard"
+                        val startDest = "main"
                         val floatingNavBackground = MaterialTheme.colorScheme.background
                         val floatingNavBackdrop: LayerBackdrop? = if (LiquidGlassSupport.isSupported) {
                             rememberLayerBackdrop {
@@ -1266,14 +1024,6 @@ class MainActivity : ComponentActivity() {
                         composable("settings/advanced") {
                             RefreshableScreen(mainViewModel, navController) {
                                 AdvancedSettingsContent(mainViewModel, navController)
-                            }
-                        }
-                        composable("wizard") {
-                            LaunchedEffect(Unit) {
-                                getSharedPreferences("wizard", 0)
-                                    .edit().putInt("version", 0).commit()
-                                showLauncherStartup(firstRun = true)
-                                runLauncherStartupChecks(firstRun = true)
                             }
                         }
                         composable("toolbox") {

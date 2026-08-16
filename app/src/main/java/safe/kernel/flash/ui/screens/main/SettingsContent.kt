@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Code
@@ -245,23 +244,6 @@ fun ColumnScope.SettingsContent(
                 content = MaterialTheme.colorScheme.onTertiaryContainer
             ),
             onClick = { navController.navigate("toolbox") }
-        )
-        ListItem(
-            title = "重新启动向导",
-            subtitle = "重新执行首次安装引导流程",
-            leadingIcon = Icons.Filled.AutoAwesome,
-            leadingColors = ListItemIconColors(
-                container = MaterialTheme.colorScheme.secondaryContainer,
-                content = MaterialTheme.colorScheme.onSecondaryContainer
-            ),
-            onClick = {
-                context.getSharedPreferences("wizard", 0)
-                    .edit().putInt("version", 0).apply()
-                navController.navigate("wizard") {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
-                    launchSingleTop = true
-                }
-            }
         )
     }
 

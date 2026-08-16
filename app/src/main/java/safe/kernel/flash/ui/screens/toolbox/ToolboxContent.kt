@@ -20,26 +20,19 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Usb
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.topjohnwu.superuser.Shell
 import safe.kernel.flash.ui.components.ListItem
 import safe.kernel.flash.ui.components.ListItemIconColors
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -50,15 +43,6 @@ fun ColumnScope.ToolboxContent(
     navController: NavController
 ) {
     val context = LocalContext.current
-
-    // Toggle states read via root
-    var avbDisabled by remember { mutableStateOf(false) }
-    var avbHidden by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        avbDisabled = Shell.cmd("test -f /data/adb/modules/RKF/config/avb_disable && echo yes || echo no").exec().out.firstOrNull() == "yes"
-        avbHidden = Shell.cmd("test -f /data/adb/modules/RKF/config/avb_hide && echo yes || echo no").exec().out.firstOrNull() == "yes"
-    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.height(4.dp))
@@ -85,57 +69,6 @@ fun ColumnScope.ToolboxContent(
                 content = MaterialTheme.colorScheme.onTertiaryContainer
             ),
             onClick = { navController.navigate("toolbox/full_backup") }
-        )
-
-        ListItem(
-            title = "自动禁用 AVB2.0",
-            subtitle = if (avbDisabled) "每次开机自动关闭 AVB 校检" else "已禁用",
-            leadingIcon = Icons.Filled.Build,
-            leadingColors = ListItemIconColors(
-                container = if (avbDisabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                content = if (avbDisabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            trailingContent = {
-                Switch(
-                    checked = avbDisabled,
-                    onCheckedChange = { checked ->
-                        val flagFile = "/data/adb/modules/RKF/config/avb_disable"
-                        if (checked) {
-                            Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
-                        } else {
-                            Shell.cmd("rm -f $flagFile").exec()
-                        }
-                        avbDisabled = checked
-                        Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-                )
-            }
-        )
-        ListItem(
-            title = "隐藏 AVB 状态",
-            subtitle = if (avbHidden) "隐藏已关闭 AVB 校检的痕迹" else "已禁用",
-            leadingIcon = Icons.Filled.VisibilityOff,
-            leadingColors = ListItemIconColors(
-                container = if (avbHidden) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                content = if (avbHidden) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            trailingContent = {
-                Switch(
-                    checked = avbHidden,
-                    onCheckedChange = { checked ->
-                        val flagFile = "/data/adb/modules/RKF/config/avb_hide"
-                        if (checked) {
-                            Shell.cmd("mkdir -p /data/adb/modules/RKF/config && touch $flagFile").exec()
-                        } else {
-                            Shell.cmd("rm -f $flagFile").exec()
-                        }
-                        avbHidden = checked
-                        Toast.makeText(context, "重启后生效", Toast.LENGTH_SHORT).show()
-                    },
-                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-                )
-            }
         )
 
         Spacer(Modifier.height(4.dp))
