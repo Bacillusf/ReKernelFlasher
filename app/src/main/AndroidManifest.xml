@@ -55,6 +55,10 @@
             android:name=".DaemonService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
+        <service
+            android:name=".AdbTcpService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
