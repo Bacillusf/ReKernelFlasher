@@ -55,6 +55,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import safe.kernel.flash.AdbTcpService
@@ -146,8 +147,37 @@ private fun WirelessDebugCard() {
         }
     }
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            val detected = withContext(Dispatchers.IO) {
+                try {
+                    val prop = Shell.cmd("getprop service.adb.tcp.port").exec().out.firstOrNull()?.trim().orEmpty()
+                    val value = prop.toIntOrNull()
+                    if (value != null && value in 1024..65535) value else null
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            AdbTcpService.syncDetected(context, detected)
+            delay(1000)
+        }
+    }
+
     fun startAdb(port: Int) {
         scope.launch(Dispatchers.IO) {
+            // 先检测当前是否已经开启了 adb tcp 调试端口：0-1023 视为未开启，合法端口视为已开启。
+            val currentProp = Shell.cmd("getprop service.adb.tcp.port").exec().out.firstOrNull()?.trim().orEmpty()
+            val currentPort = currentProp.toIntOrNull()
+            val alreadyOpenPort = if (currentPort != null && currentPort in 1024..65535) currentPort else null
+
+            if (alreadyOpenPort != null) {
+                // 已经开启：跳过开端口，直接发通知并变灰。
+                withContext(Dispatchers.Main) {
+                    AdbTcpService.start(context, alreadyOpenPort)
+                }
+                return@launch
+            }
+
             val result = Shell.cmd("setprop service.adb.tcp.port $port && stop adbd && start adbd").exec()
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {

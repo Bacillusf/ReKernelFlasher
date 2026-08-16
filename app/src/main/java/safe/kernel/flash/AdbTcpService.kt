@@ -26,6 +26,7 @@ class AdbTcpService : Service() {
 
         private const val ACTION_START = "safe.kernel.flash.ADB_TCP_START"
         private const val ACTION_STOP = "safe.kernel.flash.ADB_TCP_STOP"
+        private const val ACTION_DISMISS = "safe.kernel.flash.ADB_TCP_DISMISS"
         private const val EXTRA_PORT = "extra_port"
 
         val isRunning = mutableStateOf(false)
@@ -38,7 +39,7 @@ class AdbTcpService : Service() {
                 action = ACTION_START
                 putExtra(EXTRA_PORT, port)
             }
-            context.startForegroundService(intent)
+            runCatching { context.startForegroundService(intent) }
         }
 
         fun stop(context: Context) {
@@ -46,6 +47,27 @@ class AdbTcpService : Service() {
                 action = ACTION_STOP
             }
             context.startService(intent)
+        }
+
+        fun dismiss(context: Context) {
+            isRunning.value = false
+            currentPort.value = 0
+            val intent = Intent(context, AdbTcpService::class.java).apply {
+                action = ACTION_DISMISS
+            }
+            context.startService(intent)
+        }
+
+        fun syncDetected(context: Context, port: Int?) {
+            if (port != null) {
+                if (!isRunning.value || currentPort.value != port) {
+                    start(context, port)
+                }
+            } else {
+                if (isRunning.value) {
+                    dismiss(context)
+                }
+            }
         }
     }
 
@@ -67,6 +89,12 @@ class AdbTcpService : Service() {
             }
             ACTION_STOP -> {
                 runStopCommand()
+            }
+            ACTION_DISMISS -> {
+                isRunning.value = false
+                currentPort.value = 0
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
             }
         }
         return START_NOT_STICKY
