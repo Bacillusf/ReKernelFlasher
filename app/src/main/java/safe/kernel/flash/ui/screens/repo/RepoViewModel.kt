@@ -58,12 +58,23 @@ class RepoItem(
     val manager: RepoManager?,
     val deviceModel: String?,
     val kernelVersion: String?,
+    val managerVer: String?,
     val features: List<String>
 ) {
-    val line2: String
+    var isLatest: Boolean = false
+
+    val managerVersion: String
         get() {
             val m = manager?.label ?: "未知管理器"
-            return if (deviceModel != null) "$m · $deviceModel" else "$m · 内核 $kernelVersion"
+            val ver = managerVer ?: "未知"
+            return "$m:$ver"
+        }
+
+    val line2: String
+        get() = when {
+            deviceModel != null -> deviceModel
+            kernelVersion != null -> "内核 $kernelVersion"
+            else -> "未知"
         }
 }
 
@@ -122,6 +133,7 @@ class RepoViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     _allItems.clear()
                     _allItems.addAll(items)
+                    markLatest()
                     saveCache(context, body)
                     applyFilters()
                     isLoading = false
@@ -280,6 +292,7 @@ class RepoViewModel : ViewModel() {
         val isOnePlusBuild = tag.contains("OORB-ONEP")
         val deviceModel = if (isOnePlusBuild) extractDeviceModel(name) else null
         val kernelVersion = if (isOplusBuild) extractKernelVersion(name) else null
+        val managerVer = tokens.firstOrNull { it.matches(Regex("\\d+")) }
         val features = buildList {
             if (tokens.contains("SUSFS")) add("SusFS支持")
             if (tokens.contains("KPN")) add("KPN支持")
@@ -292,7 +305,7 @@ class RepoViewModel : ViewModel() {
             if (tokens.contains("IN")) add("网络功能扩展")
             if (isOplusBuild && !contains("风驰支持")) add("风驰支持")
         }
-        return RepoItem(name, url, tag, type, manager, deviceModel, kernelVersion, features)
+        return RepoItem(name, url, tag, type, manager, deviceModel, kernelVersion, managerVer, features)
     }
 
     private fun extractDeviceModel(name: String): String? {
@@ -305,13 +318,27 @@ class RepoViewModel : ViewModel() {
         return Regex("""(\d+\.\d+\.\d+)""").find(name)?.groupValues?.get(1)
     }
 
+    private fun markLatest() {
+        val maxByManager = mutableMapOf<RepoManager, Long>()
+        for (item in _allItems) {
+            val m = item.manager ?: continue
+            val v = item.managerVer?.toLongOrNull() ?: continue
+            val cur = maxByManager[m]
+            if (cur == null || v > cur) maxByManager[m] = v
+        }
+        for (item in _allItems) {
+            val m = item.manager ?: continue
+            val v = item.managerVer?.toLongOrNull() ?: continue
+            item.isLatest = maxByManager[m] == v
+        }
+    }
+
     private fun applyFilters() {
         val q = query.trim()
         val t = typeFilter
         val v = versionFilter
         val m = managerFilter
-        _items.clear()
-        _items.addAll(_allItems.filter { item ->
+        val filtered = _allItems.filter { item ->
             (q.isEmpty() || item.filename.contains(q, ignoreCase = true)) &&
                 (t == TypeFilter.ALL || item.type == if (t == TypeFilter.GKI) RepoType.GKI else RepoType.OKI) &&
                 when (v) {
@@ -326,7 +353,11 @@ class RepoViewModel : ViewModel() {
                     ManagerFilter.SUKISU -> item.manager == RepoManager.SUKISU
                     ManagerFilter.RESUKI -> item.manager == RepoManager.RESUKI
                 }
-        })
+        }
+        val (latest, rest) = filtered.partition { it.isLatest }
+        _items.clear()
+        _items.addAll(latest)
+        _items.addAll(rest)
     }
 
     private fun cacheFile(context: Context): File = File(context.filesDir, "repo_cache.json")
@@ -338,6 +369,7 @@ class RepoViewModel : ViewModel() {
                 val items = parseReleases(f.readText())
                 _allItems.clear()
                 _allItems.addAll(items)
+                markLatest()
                 applyFilters()
             }
         } catch (e: Exception) {

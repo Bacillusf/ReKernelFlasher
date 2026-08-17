@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -314,6 +315,24 @@ private fun RepoCard(
             .softShadow(cornerRadius = 18.dp, alpha = 0.06f, offsetY = 2.dp)
     ) {
         Column(Modifier.padding(14.dp)) {
+            if (item.isLatest) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "Latest ${item.manager?.label ?: "未知管理器"} Anykernel3",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFB300),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+            }
             Text(
                 text = item.filename,
                 style = MaterialTheme.typography.titleSmall,
@@ -321,14 +340,10 @@ private fun RepoCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = item.line2,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Spacer(Modifier.height(8.dp))
+            RedTag(item.managerVersion)
+            Spacer(Modifier.height(6.dp))
+            RedTag(item.line2)
             if (item.features.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 FlowRow(
@@ -401,5 +416,24 @@ private fun RepoCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RedTag(text: String) {
+    Box(
+        modifier = Modifier
+            .background(
+                MaterialTheme.colorScheme.errorContainer,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
