@@ -77,6 +77,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -857,7 +858,11 @@ class MainActivity : ComponentActivity() {
                                         val showRebootMenu = remember { mutableStateOf(false) }
                                         Box {
                                             IconButton(onClick = { showRebootMenu.value = true }) {
-                                                Icon(Icons.Filled.PowerSettingsNew, contentDescription = "重启")
+                                                Icon(
+                                                    Icons.Filled.PowerSettingsNew,
+                                                    contentDescription = "重启",
+                                                    tint = Color(0xFF64B5F6)
+                                                )
                                             }
                                             DropdownMenu(expanded = showRebootMenu.value, onDismissRequest = { showRebootMenu.value = false }) {
                                                 DropdownMenuItem(text = { Text(stringResource(R.string.reboot)) }, onClick = { showRebootMenu.value = false; rebootViewModel.showConfirm("") })

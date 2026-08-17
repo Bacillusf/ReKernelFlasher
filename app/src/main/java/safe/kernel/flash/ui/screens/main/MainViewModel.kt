@@ -80,11 +80,17 @@ class MainViewModel(
     val error: String
         get() = _error!!
 
-    var dpiScale by mutableFloatStateOf(1.0f)
+    private val dpiPrefs = context.applicationContext
+        .getSharedPreferences("rekf_settings", Context.MODE_PRIVATE)
+
+    var dpiScale by mutableFloatStateOf(
+        dpiPrefs.getFloat("dpi_scale", 1.0f).coerceIn(0.5f, 1.5f)
+    )
         private set
 
     fun applyDpiScale(scale: Float) {
         dpiScale = scale.coerceIn(0.5f, 1.5f)
+        dpiPrefs.edit().putFloat("dpi_scale", dpiScale).apply()
     }
 
     // Update state
