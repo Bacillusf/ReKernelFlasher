@@ -14,7 +14,7 @@
 
 应用启动后会自动读取设备相关信息并展示在主页，如下图所示：
 
-![图一 · 应用主页](./pictures/1.png)
+<a href="./pictures/1.png"><img src="./pictures/1.png" alt="图一 · 应用主页" width="300"></a>
 
 主页会自动读取以下信息：
 
@@ -39,11 +39,11 @@
 - `Vendor_DLKM`
 - `boot.img` / `init_boot.img` 相关信息
 
-![图二 · 槽位信息](./pictures/2.png)
+<a href="./pictures/2.png"><img src="./pictures/2.png" alt="图二 · 槽位信息" width="300"></a>
 
 > **提示**：点击「检查内核版本」按钮会重新刷新并解析当前内核版本信息。
 
-![图三 · 检查内核版本](./pictures/3.png)
+<a href="./pictures/3.png"><img src="./pictures/3.png" alt="图三 · 检查内核版本" width="300"></a>
 
 ---
 
@@ -51,19 +51,19 @@
 
 在「刷写」页面点击「刷入」按钮进入刷写页面：
 
-![图四 · 刷写页面](./pictures/4.png)
+<a href="./pictures/4.png"><img src="./pictures/4.png" alt="图四 · 刷写页面" width="300"></a>
 
 #### 3.1 刷入 AK3
 
 1. **本地刷写**：点击「刷写 AK3」按钮，选择你的 AnyKernel3 压缩包，此时会弹出二次确认弹窗，点击确认即可开始刷写。
 
-   ![图五 · 本地刷写 AK3](./pictures/5.png)
+   <a href="./pictures/5.png"><img src="./pictures/5.png" alt="图五 · 本地刷写 AK3" width="300"></a>
 
-   ![图八 · 二次确认弹窗](./pictures/8.png)
+   <a href="./pictures/8.png"><img src="./pictures/8.png" alt="图八 · 二次确认弹窗" width="300"></a>
 
 2. **使用云上 G(O)KI 刷写**：回到刷写页面，点击右上角云朵图标进入云 G(O)KI 仓库，选择你对应的包，点击右下角「下载」，下载完成后会询问是否自动刷写，点击确认即可完成刷写。
 
-   ![图六 · 云端刷写](./pictures/6.png)
+   <a href="./pictures/6.png"><img src="./pictures/6.png" alt="图六 · 云端刷写" width="300"></a>
 
 3. **特别提示**：您可以完全信任云 G(O)KI 内下载的内容。但需要特别注意的是，我们强烈建议您在设置中打开「自动备份」开关，以免开机后遇到屏幕闪烁、显示异常等异常情况时，可以快速回滚您的快照备份。详细信息请参见本文档「4. 备份 & 恢复（包含重要提示）」中的「重要提示」部分。
 
@@ -73,7 +73,7 @@
 
 6. **刷入分区镜像**：点击进入之后可以看到我们为您提供的预设分区 `boot`、`dtbo`、`init_boot`、`recovery`、`system_dlkm`、`vbmeta`、`vendor_boot`。点击您想要刷入的分区，选择对应的 `*.img`、`*.bin` 文件，此时会弹出二次确认弹窗，点击确认后继续刷写。
 
-   ![图七 · 刷写分区](./pictures/7.png)
+   <a href="./pictures/7.png"><img src="./pictures/7.png" alt="图七 · 刷写分区" width="300"></a>
 
 ---
 
@@ -89,12 +89,12 @@
 
 > **注意**：恢复备份须到刷写页面点击「恢复」按钮，恢复对应槽位的备份。
 
-![图九 · 备份 & 恢复](./pictures/9.png)
+<a href="./pictures/9.png"><img src="./pictures/9.png" alt="图九 · 备份 & 恢复" width="300"></a>
 
 #### 4.2 重要提示
 
 我们强烈建议开启「自动备份」作为保险，以免刷写之后出现问题，便于用备份恢复。AK3 支持一键回滚，可以在「操作记录」以及「备份」中触发。
-![回滚](./pictures/16.png)
+<a href="./pictures/16.png"><img src="./pictures/16.png" alt="回滚" width="300"></a>
 
 ---
 
@@ -102,7 +102,7 @@
 
 在「设置」页点击「百宝箱」即可进入，其中包含以下实用工具：
 
-![图十 · 百宝箱主页面](./pictures/10.png)
+<a href="./pictures/10.png"><img src="./pictures/10.png" alt="图十 · 百宝箱主页面" width="300"></a>
 
 #### 5.1 解包（Payload-Dumper）
 
@@ -111,7 +111,7 @@
 - **解包**：点击后选择 `payload.bin` 文件，应用会使用内置的 `payload-dumper-go` 工具将其中的 `.img` 分区文件提取出来。
 - **解包记录**：查看已解包的 `.img` 文件（默认目录 `/sdcard/ReKernelFlasher/img/`），长按记录可使用系统文件管理器打开对应文件。
 
-![图十一 · 解包](./pictures/11.png)
+<a href="./pictures/11.png"><img src="./pictures/11.png" alt="图十一 · 解包" width="300"></a>
 
 #### 5.2 字库备份（全量备份）
 
@@ -121,7 +121,7 @@
 - 默认备份目录：`/sdcard/ReKernelFlasher/backups/型号字库备份`，支持自定义目录与「重置目录」。
 - 点击「开始字库备份」后会弹出确认弹窗，确认后开始备份，完成后会显示成功 / 跳过 / 失败数量。
 
-![图十二 · 字库备份](./pictures/12.png)
+<a href="./pictures/12.png"><img src="./pictures/12.png" alt="图十二 · 字库备份" width="300"></a>
 
 #### 5.3 修复 RKP（实验性）
 
@@ -135,8 +135,8 @@
 
 > **警告**：本功能是实验性的，仅供尝鲜，可能引发设备问题。如因此功能出现问题，请勿提交相关 issue。
 
-![图十三 · 修复 RKP](./pictures/13.png)
-![修复rkp](./pictures/17.png)
+<a href="./pictures/13.png"><img src="./pictures/13.png" alt="图十三 · 修复 RKP" width="300"></a>
+<a href="./pictures/17.png"><img src="./pictures/17.png" alt="修复rkp" width="300"></a>
 
 #### 5.4 开启高通 Diag 端口
 
@@ -146,7 +146,7 @@
 - **仅供骁龙设备使用，天玑设备禁止使用！**
 - 开启端口前请确保手机已经连接电脑。
 
-![图十四 · 开启高通 Diag 端口](./pictures/14.png)
+<a href="./pictures/14.png"><img src="./pictures/14.png" alt="图十四 · 开启高通 Diag 端口" width="300"></a>
 
 #### 5.5 开启无线调试端口
 
@@ -159,7 +159,7 @@
 - 开启成功后：通知栏会显示常驻通知（内含「停止」按钮），页面中的输入框与发送按钮会变灰不可点，并显示「adbd服务已在{端口}上开启」。
 - 点击页面或通知栏中的「停止」按钮，会执行 `setprop service.adb.tcp.port 0 && stop adbd && start adbd` 关闭端口，并恢复原界面。
 
-![图十五 · 开启无线调试端口](./pictures/15.png)
+<a href="./pictures/15.png"><img src="./pictures/15.png" alt="图十五 · 开启无线调试端口" width="300"></a>
 
 ---
 

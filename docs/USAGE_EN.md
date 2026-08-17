@@ -14,7 +14,7 @@
 
 After launching, the app automatically reads device information and displays it on the home screen, as shown below:
 
-![Figure 1 · App Home](./pictures/1.png)
+<a href="./pictures/1.png"><img src="./pictures/1.png" alt="Figure 1 · App Home" width="300"></a>
 
 The home screen automatically reads the following information:
 
@@ -39,11 +39,11 @@ The info panel displays:
 - `Vendor_DLKM`
 - `boot.img` / `init_boot.img` related information
 
-![Figure 2 · Slot Information](./pictures/2.png)
+<a href="./pictures/2.png"><img src="./pictures/2.png" alt="Figure 2 · Slot Information" width="300"></a>
 
 > **Tip**: Tapping the "Check Kernel Version" button re-scans and parses the current kernel version.
 
-![Figure 3 · Check Kernel Version](./pictures/3.png)
+<a href="./pictures/3.png"><img src="./pictures/3.png" alt="Figure 3 · Check Kernel Version" width="300"></a>
 
 ---
 
@@ -51,19 +51,19 @@ The info panel displays:
 
 On the "Flashing" page, tap the "Flash" button to enter the flashing page:
 
-![Figure 4 · Flashing Page](./pictures/4.png)
+<a href="./pictures/4.png"><img src="./pictures/4.png" alt="Figure 4 · Flashing Page" width="300"></a>
 
 #### 3.1 Flash AK3
 
 1. **Local flash**: Tap the "Flash AK3" button, select your AnyKernel3 zip, and a confirmation dialog will pop up. Tap confirm to start flashing.
 
-   ![Figure 5 · Local AK3 Flash](./pictures/5.png)
+   <a href="./pictures/5.png"><img src="./pictures/5.png" alt="Figure 5 · Local AK3 Flash" width="300"></a>
 
-   ![Figure 8 · Confirmation Dialog](./pictures/8.png)
+   <a href="./pictures/8.png"><img src="./pictures/8.png" alt="Figure 8 · Confirmation Dialog" width="300"></a>
 
 2. **Cloud G(O)KI flash**: Go back to the flashing page, tap the cloud icon in the top-right corner to enter the Cloud G(O)KI repository, select the package you want, then tap "Download" in the bottom-right corner. After the download completes, you will be asked whether to flash automatically — tap confirm to finish.
 
-   ![Figure 6 · Cloud Flash](./pictures/6.png)
+   <a href="./pictures/6.png"><img src="./pictures/6.png" alt="Figure 6 · Cloud Flash" width="300"></a>
 
 3. **Special note**: You can fully trust the content downloaded from Cloud G(O)KI. However, we strongly recommend enabling the "Auto Backup" switch in Settings, so that if you encounter issues after booting (such as screen flickering, display abnormalities, etc.), you can quickly roll back your snapshot backup. For details, see the "Important Notes" section under "4. Backup & Restore (with Important Notes)".
 
@@ -73,7 +73,7 @@ On the "Flashing" page, tap the "Flash" button to enter the flashing page:
 
 6. **Flash partition image**: After entering, you can see the preset partitions we provide: `boot`, `dtbo`, `init_boot`, `recovery`, `system_dlkm`, `vbmeta`, `vendor_boot`. Tap the partition you want to flash, select the corresponding `*.img` / `*.bin` file, and a confirmation dialog will pop up. Tap confirm to continue flashing.
 
-   ![Figure 7 · Flash Partition](./pictures/7.png)
+   <a href="./pictures/7.png"><img src="./pictures/7.png" alt="Figure 7 · Flash Partition" width="300"></a>
 
 ---
 
@@ -89,13 +89,13 @@ After selecting the partitions you want to back up, tap the "Backup Selected Par
 
 > **Note**: To restore a backup, go to the flashing page, tap the "Restore" button, and restore the backup for the corresponding slot.
 
-![Figure 9 · Backup & Restore](./pictures/9.png)
+<a href="./pictures/9.png"><img src="./pictures/9.png" alt="Figure 9 · Backup & Restore" width="300"></a>
 
 #### 4.2 Important Notes
 
 We strongly recommend enabling "Auto Backup" as insurance, so that if problems occur after flashing, you can restore from the backup. AK3 supports one-tap rollback, which can be triggered from "Operation History" and "Backups".
 
-![Rollback](./pictures/16.png)
+<a href="./pictures/16.png"><img src="./pictures/16.png" alt="Rollback" width="300"></a>
 
 ---
 
@@ -103,7 +103,7 @@ We strongly recommend enabling "Auto Backup" as insurance, so that if problems o
 
 Go to the "Settings" page and tap "Toolbox" to enter it. It contains the following useful tools:
 
-![Figure 10 · Toolbox Home](./pictures/10.png)
+<a href="./pictures/10.png"><img src="./pictures/10.png" alt="Figure 10 · Toolbox Home" width="300"></a>
 
 #### 5.1 Unpack (Payload-Dumper)
 
@@ -112,7 +112,7 @@ Used to extract `.img` partition files from an OTA `payload.bin`.
 - **Unpack**: Tap it, then select a `payload.bin` file. The app uses the built-in `payload-dumper-go` tool to extract the `.img` partition files.
 - **Unpack records**: View the extracted `.img` files (default directory `/sdcard/ReKernelFlasher/img/`). Long-press a record to open it with the system file manager.
 
-![Figure 11 · Unpack](./pictures/11.png)
+<a href="./pictures/11.png"><img src="./pictures/11.png" alt="Figure 11 · Unpack" width="300"></a>
 
 #### 5.2 Firmware Backup (Full Backup)
 
@@ -122,7 +122,7 @@ Used to back up all partitions except `userdata` and `sdc`. Backup records are s
 - Default backup directory: `/sdcard/ReKernelFlasher/backups/{model}字库备份`. Supports a custom directory and "Reset Directory".
 - Tapping "Start Firmware Backup" shows a confirmation dialog. After confirming, the backup starts and shows success / skipped / failed counts when done.
 
-![Figure 12 · Firmware Backup](./pictures/12.png)
+<a href="./pictures/12.png"><img src="./pictures/12.png" alt="Figure 12 · Firmware Backup" width="300"></a>
 
 #### 5.3 Fix RKP (Experimental)
 
@@ -136,8 +136,8 @@ Used to fix TEE freeze and RKP-unavailable issues on Snapdragon (Qualcomm) devic
 
 > **Warning**: This feature is experimental, for trial only, and may cause device issues. If problems occur, do not file related issues.
 
-![Figure 13 · Fix RKP](./pictures/13.png)
-![RKP Fix](./pictures/17.png)
+<a href="./pictures/13.png"><img src="./pictures/13.png" alt="Figure 13 · Fix RKP" width="300"></a>
+<a href="./pictures/17.png"><img src="./pictures/17.png" alt="RKP Fix" width="300"></a>
 
 #### 5.4 Enable Qualcomm Diag Port
 
@@ -147,7 +147,7 @@ Used to enable the Diag debug port on Qualcomm devices for tools such as QPST / 
 - **Snapdragon devices only. Do NOT use on Dimensity (MediaTek) devices!**
 - Make sure the phone is connected to a computer before enabling the port.
 
-![Figure 14 · Enable Qualcomm Diag Port](./pictures/14.png)
+<a href="./pictures/14.png"><img src="./pictures/14.png" alt="Figure 14 · Enable Qualcomm Diag Port" width="300"></a>
 
 #### 5.5 Enable Wireless Debugging Port
 
@@ -160,7 +160,7 @@ Used to enable the `adbd` service (adb over TCP) on a specified port, so you can
 - After it is enabled: the notification bar shows a persistent notification (with a "Stop" button), the input field and send button become greyed out, and "adbd服务已在{port}上开启" is shown.
 - Tapping the "Stop" button on the page or in the notification runs `setprop service.adb.tcp.port 0 && stop adbd && start adbd` to close the port and restore the UI.
 
-![Figure 15 · Enable Wireless Debugging Port](./pictures/15.png)
+<a href="./pictures/15.png"><img src="./pictures/15.png" alt="Figure 15 · Enable Wireless Debugging Port" width="300"></a>
 
 ---
 
