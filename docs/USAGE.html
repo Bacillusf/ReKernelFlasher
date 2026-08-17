@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReKernelFlasher 使用文档 / Usage</title>
+<style>
+  :root {
+    --primary: #34A853;
+    --primary-dark: #2b8c45;
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --muted: #5f6368;
+    --border: #e4e7eb;
+    --accent: #64b5f6;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 22px;
+    background: rgba(255,255,255,.86);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .brand .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 0 4px rgba(52,168,83,.18);
+  }
+  .lang-btn {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: .18s;
+  }
+  .lang-btn:hover { background: #eefaf1; border-color: var(--primary); }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 26px 20px 80px;
+  }
+  .hero {
+    text-align: center;
+    padding: 26px 16px 8px;
+  }
+  .hero h1 { margin: 0 0 6px; font-size: 30px; }
+  .hero p { margin: 0; color: var(--muted); }
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 22px;
+    margin: 22px 0 30px;
+    box-shadow: var(--shadow);
+  }
+  nav.toc h2 { margin: 0 0 10px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  nav.toc ol { margin: 0; padding-left: 20px; }
+  nav.toc li { margin: 5px 0; }
+  nav.toc a { color: var(--primary-dark); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px 26px;
+    margin: 26px 0;
+    box-shadow: var(--shadow);
+  }
+  section h2 {
+    margin: 0 0 14px;
+    font-size: 23px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eef0f3;
+    color: var(--primary-dark);
+  }
+  section h3 { margin: 20px 0 8px; font-size: 18px; }
+  section p { margin: 10px 0; }
+  section ul, section ol { padding-left: 22px; }
+  section li { margin: 6px 0; }
+  code {
+    background: #f0f2f5;
+    border-radius: 6px;
+    padding: 1px 6px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .9em;
+  }
+  blockquote {
+    margin: 12px 0;
+    padding: 10px 14px;
+    border-left: 4px solid var(--accent);
+    background: #f0f7ff;
+    border-radius: 0 8px 8px 0;
+    color: #2563a3;
+  }
+  blockquote.warn {
+    border-left-color: #f59e0b;
+    background: #fff7e6;
+    color: #92400e;
+  }
+  figure { margin: 16px 0; text-align: center; }
+  figure img {
+    max-width: 320px;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    cursor: zoom-in;
+    transition: transform .15s, box-shadow .15s;
+  }
+  figure img:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+  figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .badge {
+    display: inline-block;
+    background: #eefaf1;
+    color: var(--primary-dark);
+    border: 1px solid #cdeeda;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.82);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    padding: 30px;
+  }
+  #lightbox img {
+    max-width: 94%;
+    max-height: 92%;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span>ReKernelFlasher</div>
+  <button id="lang-btn" class="lang-btn" onclick="toggleLang()">EN</button>
+</header>
+
+<main>
+
+  <!-- ============ 中文 ============ -->
+  <div id="content-zh">
+    <div class="hero">
+      <h1>使用文档</h1>
+      <p>ReKernelFlasher · Android 内核刷写工具</p>
+    </div>
+
+    <nav class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#zh-1">信息读取 &amp; 展示（主页）</a></li>
+        <li><a href="#zh-2">槽位 &amp; 内核版本检查</a></li>
+        <li><a href="#zh-3">刷入功能介绍</a></li>
+        <li><a href="#zh-4">备份 &amp; 恢复（包含重要提示）</a></li>
+        <li><a href="#zh-5">百宝箱内工具介绍</a></li>
+        <li><a href="#zh-6">应用设置</a></li>
+      </ol>
+    </nav>
+
+    <section id="zh-1">
+      <h2>1. 信息读取 &amp; 展示（主页）</h2>
+      <p>应用启动后会自动读取设备相关信息并展示在主页，如下图所示：</p>
+      <figure><a href="pictures/1.png" onclick="openLightbox('pictures/1.png'); return false;"><img src="pictures/1.png" alt="应用主页"></a><figcaption>图一 · 应用主页</figcaption></figure>
+      <p>主页会自动读取以下信息：</p>
+      <ul>
+        <li><code>设备 ROOT 管理器</code></li>
+        <li><code>安卓版本</code></li>
+        <li><code>设备代号</code></li>
+        <li><code>系统构建版本</code></li>
+        <li><code>当前槽位</code></li>
+        <li><code>BootHAL</code></li>
+        <li><code>SUSFS Version</code></li>
+        <li><code>内核版本</code></li>
+      </ul>
+    </section>
+
+    <section id="zh-2">
+      <h2>2. 槽位 &amp; 内核版本检查</h2>
+      <p>切换到「刷写」板块，如果你的手机支持 AB 分区，这里会显示两个槽位的信息。</p>
+      <p>信息板块会分别显示：</p>
+      <ul>
+        <li>活跃状态</li>
+        <li><code>Vendor_DLKM</code></li>
+        <li><code>boot.img</code> / <code>init_boot.img</code> 相关信息</li>
+      </ul>
+      <figure><a href="pictures/2.png" onclick="openLightbox('pictures/2.png'); return false;"><img src="pictures/2.png" alt="槽位信息"></a><figcaption>图二 · 槽位信息</figcaption></figure>
+      <blockquote><strong>提示</strong>：点击「检查内核版本」按钮会重新刷新并解析当前内核版本信息。</blockquote>
+      <figure><a href="pictures/3.png" onclick="openLightbox('pictures/3.png'); return false;"><img src="pictures/3.png" alt="检查内核版本"></a><figcaption>图三 · 检查内核版本</figcaption></figure>
+    </section>
+
+    <section id="zh-3">
+      <h2>3. 刷入功能介绍</h2>
+      <p>在「刷写」页面点击「刷入」按钮进入刷写页面：</p>
+      <figure><a href="pictures/4.png" onclick="openLightbox('pictures/4.png'); return false;"><img src="pictures/4.png" alt="刷写页面"></a><figcaption>图四 · 刷写页面</figcaption></figure>
+
+      <h3>3.1 刷入 AK3</h3>
+      <ol>
+        <li><strong>本地刷写</strong>：点击「刷写 AK3」按钮，选择你的 AnyKernel3 压缩包，此时会弹出二次确认弹窗，点击确认即可开始刷写。
+          <figure><a href="pictures/5.png" onclick="openLightbox('pictures/5.png'); return false;"><img src="pictures/5.png" alt="本地刷写 AK3"></a><figcaption>图五 · 本地刷写 AK3</figcaption></figure>
+          <figure><a href="pictures/8.png" onclick="openLightbox('pictures/8.png'); return false;"><img src="pictures/8.png" alt="二次确认弹窗"></a><figcaption>图八 · 二次确认弹窗</figcaption></figure>
+        </li>
+        <li><strong>使用云上 G(O)KI 刷写</strong>：回到刷写页面，点击右上角云朵图标进入云 G(O)KI 仓库，选择你对应的包，点击右下角「下载」，下载完成后会询问是否自动刷写，点击确认即可完成刷写。
+          <figure><a href="pictures/6.png" onclick="openLightbox('pictures/6.png'); return false;"><img src="pictures/6.png" alt="云端刷写"></a><figcaption>图六 · 云端刷写</figcaption></figure>
+        </li>
+        <li><strong>特别提示</strong>：您可以完全信任云 G(O)KI 内下载的内容。但需要特别注意的是，我们强烈建议您在设置中打开「自动备份」开关，以免开机后遇到屏幕闪烁、显示异常等异常情况时，可以快速回滚您的快照备份。</li>
+        <li><strong>重要提示</strong>：刷入 AK3 时请尽量使用「刷写 AK3」选项，只有出现问题时才考虑使用「刷入 AK3 压缩包（mkbootfs）」。此选项计划于 v3.0（30000）中开始废弃。</li>
+        <li><strong>关于「刷入 KernelSU LKM Driver」</strong>：此功能是从上游分支 <a href="https://github.com/fatalcoder524/KernelFlasher" target="_blank">KernelFlasher</a> 继承而来，不建议使用，因为它可能导致问题，计划将在 v2.9（20900）中废弃。</li>
+        <li><strong>刷入分区镜像</strong>：点击进入之后可以看到预设分区 <code>boot</code>、<code>dtbo</code>、<code>init_boot</code>、<code>recovery</code>、<code>system_dlkm</code>、<code>vbmeta</code>、<code>vendor_boot</code>。点击想要刷入的分区，选择对应的 <code>*.img</code>、<code>*.bin</code> 文件，弹出二次确认弹窗后点击确认继续刷写。
+          <figure><a href="pictures/7.png" onclick="openLightbox('pictures/7.png'); return false;"><img src="pictures/7.png" alt="刷写分区"></a><figcaption>图七 · 刷写分区</figcaption></figure>
+        </li>
+      </ol>
+    </section>
+
+    <section id="zh-4">
+      <h2>4. 备份 &amp; 恢复（包含重要提示）</h2>
+      <h3>4.1 备份 &amp; 恢复</h3>
+      <p>点击「备份」按钮进入备份页面，预设分区：<code>boot</code>、<code>dtbo</code>、<code>init_boot</code>、<code>recovery</code>、<code>system_dlkm</code>、<code>vbmeta</code>、<code>vendor_boot</code>、<code>vendor_dlkm</code>。</p>
+      <p>勾选完想要备份的分区后，点击「备份选定分区」按钮即可开始备份。备份完成后，可回到主页点击底栏「备份」选项查看备份。</p>
+      <blockquote><strong>注意</strong>：恢复备份须到刷写页面点击「恢复」按钮，恢复对应槽位的备份。</blockquote>
+      <figure><a href="pictures/9.png" onclick="openLightbox('pictures/9.png'); return false;"><img src="pictures/9.png" alt="备份与恢复"></a><figcaption>图九 · 备份 &amp; 恢复</figcaption></figure>
+      <h3>4.2 重要提示</h3>
+      <p>我们强烈建议开启「自动备份」作为保险。AK3 支持一键回滚，可以在「操作记录」以及「备份」中触发。</p>
+      <figure><a href="pictures/16.png" onclick="openLightbox('pictures/16.png'); return false;"><img src="pictures/16.png" alt="回滚"></a><figcaption>回滚</figcaption></figure>
+    </section>
+
+    <section id="zh-5">
+      <h2>5. 百宝箱内工具介绍</h2>
+      <p>在「设置」页点击「百宝箱」即可进入：</p>
+      <figure><a href="pictures/10.png" onclick="openLightbox('pictures/10.png'); return false;"><img src="pictures/10.png" alt="百宝箱主页面"></a><figcaption>图十 · 百宝箱主页面</figcaption></figure>
+
+      <h3>5.1 解包（Payload-Dumper）</h3>
+      <p>用于从 OTA 的 <code>payload.bin</code> 中提取 <code>.img</code> 分区文件。</p>
+      <ul>
+        <li><strong>解包</strong>：点击后选择 <code>payload.bin</code> 文件，应用会使用内置的 <code>payload-dumper-go</code> 工具提取其中的 <code>.img</code> 分区文件。</li>
+        <li><strong>解包记录</strong>：查看已解包的 <code>.img</code> 文件（默认目录 <code>/sdcard/ReKernelFlasher/img/</code>），长按记录可使用系统文件管理器打开。</li>
+      </ul>
+      <figure><a href="pictures/11.png" onclick="openLightbox('pictures/11.png'); return false;"><img src="pictures/11.png" alt="解包"></a><figcaption>图十一 · 解包</figcaption></figure>
+
+      <h3>5.2 字库备份（全量备份）</h3>
+      <p>用于备份除 <code>userdata</code>、<code>sdc</code> 以外的所有分区，备份记录会显示在「备份」页面。</p>
+      <ul>
+        <li>进入后自动检测平台、分区总数、跳过分区以及预计占用空间。</li>
+        <li>默认备份目录：<code>/sdcard/ReKernelFlasher/backups/型号字库备份</code>，支持自定义目录与「重置目录」。</li>
+        <li>点击「开始字库备份」后弹出确认弹窗，确认后开始备份，完成后显示成功 / 跳过 / 失败数量。</li>
+      </ul>
+      <figure><a href="pictures/12.png" onclick="openLightbox('pictures/12.png'); return false;"><img src="pictures/12.png" alt="字库备份"></a><figcaption>图十二 · 字库备份</figcaption></figure>
+
+      <h3>5.3 修复 RKP（实验性）</h3>
+      <p>用于修复骁龙（高通）设备因解锁 BL 导致的 TEE 假死、RKP 不可用问题。</p>
+      <ul>
+        <li><strong>仅适用于高通（Qualcomm）平台，联发科（MediaTek）勿用！</strong></li>
+        <li>两种修复方案：「Qcom 8 Elite Gen5（Beta）」与「处理器 ≤ 8 Elite」。</li>
+        <li>执行前会自动备份 <code>persist</code> 分区，并输出完整日志。</li>
+      </ul>
+      <blockquote class="warn"><strong>警告</strong>：本功能是实验性的，仅供尝鲜，可能引发设备问题。如因此功能出现问题，请勿提交相关 issue。</blockquote>
+      <figure><a href="pictures/13.png" onclick="openLightbox('pictures/13.png'); return false;"><img src="pictures/13.png" alt="修复 RKP"></a><figcaption>图十三 · 修复 RKP</figcaption></figure>
+      <figure><a href="pictures/17.png" onclick="openLightbox('pictures/17.png'); return false;"><img src="pictures/17.png" alt="修复 RKP 过程"></a><figcaption>修复 RKP</figcaption></figure>
+
+      <h3>5.4 开启高通 Diag 端口</h3>
+      <p>用于开启高通设备的 Diag 调试端口，供 QPST / QXDM 等工具连接设备。</p>
+      <ul>
+        <li>内部通过 <code>setprop sys.usb.config diag,adb</code> 开启端口。</li>
+        <li><strong>仅供骁龙设备使用，天玑设备禁止使用！</strong></li>
+        <li>开启端口前请确保手机已经连接电脑。</li>
+      </ul>
+      <figure><a href="pictures/14.png" onclick="openLightbox('pictures/14.png'); return false;"><img src="pictures/14.png" alt="开启高通 Diag 端口"></a><figcaption>图十四 · 开启高通 Diag 端口</figcaption></figure>
+
+      <h3>5.5 开启无线调试端口</h3>
+      <p>用于在指定端口开启 <code>adbd</code> 服务（adb over TCP），方便在电脑上通过 <code>adb connect</code> 无线连接调试。</p>
+      <ul>
+        <li>输入端口号（范围 <code>1024 – 65535</code>），端口合法时右侧「纸飞机」发送按钮才会由灰变亮。</li>
+        <li>端口不合法时，下方显示红色提示：<code>端口不合法，请输入1024-65535之间的数字</code>。</li>
+        <li>点击发送后先检查通知权限，未授权则拉起系统授权框；授权通过后执行 <code>setprop service.adb.tcp.port {端口} &amp;&amp; stop adbd &amp;&amp; start adbd</code>。</li>
+        <li>若端口已开启，应用会自动识别并跳过开端口，直接显示已开启状态。</li>
+        <li>开启成功后：通知栏显示常驻通知（内含「停止」按钮），输入框与发送按钮变灰，并显示「adbd服务已在{端口}上开启」。</li>
+        <li>点击「停止」会执行 <code>setprop service.adb.tcp.port 0 &amp;&amp; stop adbd &amp;&amp; start adbd</code> 关闭端口并恢复原界面。</li>
+      </ul>
+      <figure><a href="pictures/15.png" onclick="openLightbox('pictures/15.png'); return false;"><img src="pictures/15.png" alt="开启无线调试端口"></a><figcaption>图十五 · 开启无线调试端口</figcaption></figure>
+    </section>
+
+    <section id="zh-6">
+      <h2>6. 应用设置</h2>
+      <p>设置页主要包含：检查更新、自动备份设置、语言设置、日志设置、高级设置以及百宝箱。</p>
+      <h3>6.1 保存日志（日志设置）</h3>
+      <ul>
+        <li><strong>保存 ramoops</strong>：保存内核 panic / oops 崩溃日志（仅当设备存在 ramoops 时显示）。</li>
+        <li><strong>保存 dmesg</strong>：保存内核环形缓冲区日志。</li>
+        <li><strong>保存 logcat</strong>：保存 Android 系统日志。</li>
+      </ul>
+      <h3>6.2 高级设置</h3>
+      <ul>
+        <li><strong>界面缩放（DPI）</strong>：拖动滑条调整界面缩放比例（范围 <code>50% – 150%</code>），点击「应用」后生效，仅对当前会话生效。</li>
+      </ul>
+      <h3>6.3 语言设置</h3>
+      <ul>
+        <li>简体中文</li>
+        <li>繁體中文（香港）</li>
+        <li>繁體中文（台灣）</li>
+        <li>English</li>
+      </ul>
+    </section>
+  </div>
+
+  <!-- ============ English ============ -->
+  <div id="content-en" style="display:none;">
+    <div class="hero">
+      <h1>Usage</h1>
+      <p>ReKernelFlasher · Android kernel flashing tool</p>
+    </div>
+
+    <nav class="toc">
+      <h2>Table of Contents</h2>
+      <ol>
+        <li><a href="#en-1">Information Reading &amp; Display (Home)</a></li>
+        <li><a href="#en-2">Slots &amp; Kernel Version Check</a></li>
+        <li><a href="#en-3">Flashing Features</a></li>
+        <li><a href="#en-4">Backup &amp; Restore (with Important Notes)</a></li>
+        <li><a href="#en-5">Toolbox Tools</a></li>
+        <li><a href="#en-6">App Settings</a></li>
+      </ol>
+    </nav>
+
+    <section id="en-1">
+      <h2>1. Information Reading &amp; Display (Home)</h2>
+      <p>After launching, the app automatically reads device information and displays it on the home screen:</p>
+      <figure><a href="pictures/1.png" onclick="openLightbox('pictures/1.png'); return false;"><img src="pictures/1.png" alt="App Home"></a><figcaption>Figure 1 · App Home</figcaption></figure>
+      <p>The home screen reads:</p>
+      <ul>
+        <li><code>Device ROOT Manager</code></li>
+        <li><code>Android Version</code></li>
+        <li><code>Device Codename</code></li>
+        <li><code>System Build Version</code></li>
+        <li><code>Current Slot</code></li>
+        <li><code>BootHAL</code></li>
+        <li><code>SUSFS Version</code></li>
+        <li><code>Kernel Version</code></li>
+      </ul>
+    </section>
+
+    <section id="en-2">
+      <h2>2. Slots &amp; Kernel Version Check</h2>
+      <p>Switch to the "Flashing" tab. If your phone supports A/B partitions, two slots will be shown.</p>
+      <p>The info panel displays:</p>
+      <ul>
+        <li>Active status</li>
+        <li><code>Vendor_DLKM</code></li>
+        <li><code>boot.img</code> / <code>init_boot.img</code> information</li>
+      </ul>
+      <figure><a href="pictures/2.png" onclick="openLightbox('pictures/2.png'); return false;"><img src="pictures/2.png" alt="Slot Information"></a><figcaption>Figure 2 · Slot Information</figcaption></figure>
+      <blockquote><strong>Tip</strong>: Tapping "Check Kernel Version" re-scans and parses the current kernel version.</blockquote>
+      <figure><a href="pictures/3.png" onclick="openLightbox('pictures/3.png'); return false;"><img src="pictures/3.png" alt="Check Kernel Version"></a><figcaption>Figure 3 · Check Kernel Version</figcaption></figure>
+    </section>
+
+    <section id="en-3">
+      <h2>3. Flashing Features</h2>
+      <p>On the "Flashing" page, tap "Flash" to enter the flashing page:</p>
+      <figure><a href="pictures/4.png" onclick="openLightbox('pictures/4.png'); return false;"><img src="pictures/4.png" alt="Flashing Page"></a><figcaption>Figure 4 · Flashing Page</figcaption></figure>
+
+      <h3>3.1 Flash AK3</h3>
+      <ol>
+        <li><strong>Local flash</strong>: Tap "Flash AK3", select your AnyKernel3 zip, and a confirmation dialog will pop up. Tap confirm to start.
+          <figure><a href="pictures/5.png" onclick="openLightbox('pictures/5.png'); return false;"><img src="pictures/5.png" alt="Local AK3 Flash"></a><figcaption>Figure 5 · Local AK3 Flash</figcaption></figure>
+          <figure><a href="pictures/8.png" onclick="openLightbox('pictures/8.png'); return false;"><img src="pictures/8.png" alt="Confirmation Dialog"></a><figcaption>Figure 8 · Confirmation Dialog</figcaption></figure>
+        </li>
+        <li><strong>Cloud G(O)KI flash</strong>: Tap the cloud icon in the top-right corner to enter the Cloud G(O)KI repository, select the package, tap "Download", then confirm to flash.
+          <figure><a href="pictures/6.png" onclick="openLightbox('pictures/6.png'); return false;"><img src="pictures/6.png" alt="Cloud Flash"></a><figcaption>Figure 6 · Cloud Flash</figcaption></figure>
+        </li>
+        <li><strong>Special note</strong>: You can fully trust content downloaded from Cloud G(O)KI. We strongly recommend enabling "Auto Backup" in Settings, so you can quickly roll back if issues occur after booting.</li>
+        <li><strong>Important note</strong>: Prefer "Flash AK3". Only use "Flash AK3 Zip (mkbootfs)" if problems occur. It is planned to be deprecated from v3.0 (30000).</li>
+        <li><strong>About "Flash KernelSU LKM Driver"</strong>: Inherited from upstream <a href="https://github.com/fatalcoder524/KernelFlasher" target="_blank">KernelFlasher</a>; not recommended, planned to be deprecated in v2.9 (20900).</li>
+        <li><strong>Flash partition image</strong>: Tap a preset partition (<code>boot</code>, <code>dtbo</code>, <code>init_boot</code>, <code>recovery</code>, <code>system_dlkm</code>, <code>vbmeta</code>, <code>vendor_boot</code>), select a <code>*.img</code> / <code>*.bin</code> file, then confirm.
+          <figure><a href="pictures/7.png" onclick="openLightbox('pictures/7.png'); return false;"><img src="pictures/7.png" alt="Flash Partition"></a><figcaption>Figure 7 · Flash Partition</figcaption></figure>
+        </li>
+      </ol>
+    </section>
+
+    <section id="en-4">
+      <h2>4. Backup &amp; Restore (with Important Notes)</h2>
+      <h3>4.1 Backup &amp; Restore</h3>
+      <p>Tap "Backup" to enter the backup page. Preset partitions: <code>boot</code>, <code>dtbo</code>, <code>init_boot</code>, <code>recovery</code>, <code>system_dlkm</code>, <code>vbmeta</code>, <code>vendor_boot</code>, <code>vendor_dlkm</code>.</p>
+      <p>Select the partitions and tap "Backup Selected Partitions". After done, view backups from the bottom bar.</p>
+      <blockquote><strong>Note</strong>: To restore, go to the flashing page and tap "Restore" for the corresponding slot.</blockquote>
+      <figure><a href="pictures/9.png" onclick="openLightbox('pictures/9.png'); return false;"><img src="pictures/9.png" alt="Backup and Restore"></a><figcaption>Figure 9 · Backup &amp; Restore</figcaption></figure>
+      <h3>4.2 Important Notes</h3>
+      <p>We strongly recommend enabling "Auto Backup". AK3 supports one-tap rollback from "Operation History" and "Backups".</p>
+      <figure><a href="pictures/16.png" onclick="openLightbox('pictures/16.png'); return false;"><img src="pictures/16.png" alt="Rollback"></a><figcaption>Rollback</figcaption></figure>
+    </section>
+
+    <section id="en-5">
+      <h2>5. Toolbox Tools</h2>
+      <p>Go to Settings → "Toolbox":</p>
+      <figure><a href="pictures/10.png" onclick="openLightbox('pictures/10.png'); return false;"><img src="pictures/10.png" alt="Toolbox Home"></a><figcaption>Figure 10 · Toolbox Home</figcaption></figure>
+
+      <h3>5.1 Unpack (Payload-Dumper)</h3>
+      <p>Extract <code>.img</code> partition files from an OTA <code>payload.bin</code>.</p>
+      <ul>
+        <li><strong>Unpack</strong>: select a <code>payload.bin</code> file; the built-in <code>payload-dumper-go</code> tool extracts the <code>.img</code> files.</li>
+        <li><strong>Unpack records</strong>: view extracted <code>.img</code> files (default <code>/sdcard/ReKernelFlasher/img/</code>). Long-press to open.</li>
+      </ul>
+      <figure><a href="pictures/11.png" onclick="openLightbox('pictures/11.png'); return false;"><img src="pictures/11.png" alt="Unpack"></a><figcaption>Figure 11 · Unpack</figcaption></figure>
+
+      <h3>5.2 Firmware Backup (Full Backup)</h3>
+      <p>Back up all partitions except <code>userdata</code> and <code>sdc</code>.</p>
+      <ul>
+        <li>Auto-detects platform, partition count, skipped partitions and estimated size.</li>
+        <li>Default directory: <code>/sdcard/ReKernelFlasher/backups/{model}字库备份</code>. Custom directory supported.</li>
+        <li>Tap "Start Firmware Backup" and confirm to begin.</li>
+      </ul>
+      <figure><a href="pictures/12.png" onclick="openLightbox('pictures/12.png'); return false;"><img src="pictures/12.png" alt="Firmware Backup"></a><figcaption>Figure 12 · Firmware Backup</figcaption></figure>
+
+      <h3>5.3 Fix RKP (Experimental)</h3>
+      <p>Fix TEE freeze / RKP unavailable on Snapdragon (Qualcomm) devices caused by an unlocked bootloader.</p>
+      <ul>
+        <li><strong>Qualcomm only. Do NOT use on MediaTek!</strong></li>
+        <li>Two options: "Qcom 8 Elite Gen5 (Beta)" and "Processor ≤ 8 Elite".</li>
+        <li>Automatically backs up <code>persist</code> and outputs full logs.</li>
+      </ul>
+      <blockquote class="warn"><strong>Warning</strong>: This feature is experimental and may cause device issues. Do not file related issues.</blockquote>
+      <figure><a href="pictures/13.png" onclick="openLightbox('pictures/13.png'); return false;"><img src="pictures/13.png" alt="Fix RKP"></a><figcaption>Figure 13 · Fix RKP</figcaption></figure>
+      <figure><a href="pictures/17.png" onclick="openLightbox('pictures/17.png'); return false;"><img src="pictures/17.png" alt="RKP Fix process"></a><figcaption>RKP Fix</figcaption></figure>
+
+      <h3>5.4 Enable Qualcomm Diag Port</h3>
+      <p>Enable the Diag debug port on Qualcomm devices for tools such as QPST / QXDM.</p>
+      <ul>
+        <li>Internally runs <code>setprop sys.usb.config diag,adb</code>.</li>
+        <li><strong>Snapdragon only. Do NOT use on Dimensity (MediaTek)!</strong></li>
+        <li>Connect the phone to a computer first.</li>
+      </ul>
+      <figure><a href="pictures/14.png" onclick="openLightbox('pictures/14.png'); return false;"><img src="pictures/14.png" alt="Enable Qualcomm Diag Port"></a><figcaption>Figure 14 · Enable Qualcomm Diag Port</figcaption></figure>
+
+      <h3>5.5 Enable Wireless Debugging Port</h3>
+      <p>Enable the <code>adbd</code> service (adb over TCP) on a specified port for wireless debugging via <code>adb connect</code>.</p>
+      <ul>
+        <li>Enter a port (<code>1024 – 65535</code>); the "paper plane" button lights up only when valid.</li>
+        <li>Invalid port shows a red hint: <code>端口不合法，请输入1024-65535之间的数字</code>.</li>
+        <li>Checks notification permission first, then runs <code>setprop service.adb.tcp.port {port} &amp;&amp; stop adbd &amp;&amp; start adbd</code>.</li>
+        <li>If already enabled, it auto-detects and skips opening.</li>
+        <li>After enabled: a persistent notification (with "Stop") appears; the input and send button become greyed out.</li>
+        <li>Tap "Stop" to run <code>setprop service.adb.tcp.port 0 &amp;&amp; stop adbd &amp;&amp; start adbd</code> and restore the UI.</li>
+      </ul>
+      <figure><a href="pictures/15.png" onclick="openLightbox('pictures/15.png'); return false;"><img src="pictures/15.png" alt="Enable Wireless Debugging Port"></a><figcaption>Figure 15 · Enable Wireless Debugging Port</figcaption></figure>
+    </section>
+
+    <section id="en-6">
+      <h2>6. App Settings</h2>
+      <p>The Settings page includes: Check for Updates, Auto Backup Settings, Language Settings, Log Settings, Advanced Settings and Toolbox.</p>
+      <h3>6.1 Save Logs (Log Settings)</h3>
+      <ul>
+        <li><strong>Save ramoops</strong>: save the kernel panic / oops log (shown only when ramoops exists).</li>
+        <li><strong>Save dmesg</strong>: save the kernel ring buffer log.</li>
+        <li><strong>Save logcat</strong>: save the Android system log.</li>
+      </ul>
+      <h3>6.2 Advanced Settings</h3>
+      <ul>
+        <li><strong>UI Scale (DPI)</strong>: drag the slider to adjust UI scale (<code>50% – 150%</code>); takes effect after tapping "Apply".</li>
+      </ul>
+      <h3>6.3 Language Settings</h3>
+      <ul>
+        <li>简体中文 (Simplified Chinese)</li>
+        <li>繁體中文（香港）(Traditional Chinese, Hong Kong)</li>
+        <li>繁體中文（台灣）(Traditional Chinese, Taiwan)</li>
+        <li>English</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>ReKernelFlasher · Usage Documentation</footer>
+</main>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+  function setLang(lang) {
+    document.getElementById('content-zh').style.display = (lang === 'zh') ? '' : 'none';
+    document.getElementById('content-en').style.display = (lang === 'en') ? '' : 'none';
+    document.getElementById('lang-btn').textContent = (lang === 'zh') ? 'EN' : '中文';
+    try { localStorage.setItem('rekf-doc-lang', lang); } catch (e) {}
+  }
+  function toggleLang() {
+    var zh = document.getElementById('content-zh');
+    setLang(zh.style.display === 'none' ? 'zh' : 'en');
+  }
+  function openLightbox(src) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('rekf-doc-lang'); } catch (e) {}
+    if (saved === 'en' || saved === 'zh') {
+      setLang(saved);
+    } else {
+      var nav = (navigator.language || '').toLowerCase();
+      setLang(nav.indexOf('zh') === 0 ? 'zh' : 'en');
+    }
+  })();
+</script>
+</body>
+</html>
