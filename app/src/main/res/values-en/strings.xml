@@ -93,4 +93,8 @@
     <string name="language_settings">Language Settings</string>
     <string name="log_settings">Log Settings</string>
     <string name="advanced_settings">Advanced Settings</string>
+    <string name="storage_permission">Storage Permission</string>
+    <string name="grant_storage_permission">Grant via Settings</string>
+    <string name="manage">Manage</string>
+    <string name="diagnostics">Diagnostics</string>
 </resources>

@@ -38,7 +38,7 @@ object LanguageManager {
             "en" -> "en"
             "zh-TW" -> "zh-TW"
             "zh-HK" -> "zh-HK"
-            else -> "zh"
+            else -> "zh-CN"
         }
         val locale = Locale.forLanguageTag(tag)
         Locale.setDefault(locale)
