@@ -12,6 +12,9 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 ## 灵感
 原版KernelFlasher对新手很不友好，没有二次弹窗确认，容易刷错分区，很多新手没有备份意识，刷错了只能无助的等待全量包...而且原仓库已经归档，于是我做了这个分支
 ## 功能
+###文档/docs
+[使用文档（中文）](docs/USAGE.md)
+[Usage (English)](docs/USAGE_EN.md)
 ### 首页
 | 功能 | 说明 |
 |---|---|
@@ -80,6 +83,3 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 ./gradlew assembleDebug   # 调试版
 ./gradlew assembleRelease # 发布版
 ```
-## 文档
-- [使用文档（中文）](docs/USAGE.md)
-- [Usage (English)](docs/USAGE_EN.md)
