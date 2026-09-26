@@ -10,6 +10,9 @@ plugins {
 
 android {
     compileSdk = 37
+    // 公开 SDK 仓库里 API 37 的平台包名是 platforms;android-37.0（没有 android-37），
+    // 因此需要显式声明 minor 版本；否则 AGP 会报 "Failed to find target with hash string 'android-37'"
+    compileSdkMinor = 0
     namespace = "safe.kernel.flash"
 
     defaultConfig {
@@ -92,6 +95,9 @@ android {
             }
             jniLibs {
                 useLegacyPackaging = true
+                // libnsexec.so 是预编译好的 setns 助手（可执行文件伪装成 .so），
+                // 不要被 strip 任务处理
+                keepDebugSymbols += "**/libnsexec.so"
             }
             dex {
                 useLegacyPackaging = true

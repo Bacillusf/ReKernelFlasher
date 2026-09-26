@@ -37,3 +37,5 @@ credentials
 
 # Outputs
 *.apk
+# RKPConfig 的续期签发需要内嵌的 AOSP rkpdapp（缺失时会退回设备上已安装的那份）
+!app/src/main/assets/rkpdapp.apk

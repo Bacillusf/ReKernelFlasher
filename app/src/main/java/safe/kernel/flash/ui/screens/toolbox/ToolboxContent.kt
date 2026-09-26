@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
@@ -108,6 +109,17 @@ fun ColumnScope.ToolboxContent(
                 content = MaterialTheme.colorScheme.onErrorContainer
             ),
             onClick = { navController.navigate("toolbox/rkp_fix") }
+        )
+
+        ListItem(
+            title = "RKPConfig",
+            subtitle = "配置远程密钥分配：读取/应用属性、续期签发、查看状态",
+            leadingIcon = Icons.Filled.Security,
+            leadingColors = ListItemIconColors(
+                container = MaterialTheme.colorScheme.secondaryContainer,
+                content = MaterialTheme.colorScheme.onSecondaryContainer
+            ),
+            onClick = { navController.navigate("toolbox/rkp_config") }
         )
 
         ListItem(
