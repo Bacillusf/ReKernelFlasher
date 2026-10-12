@@ -4,6 +4,7 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 <!-- 右侧悬浮SVG图标，width控制图标大小，align="right"实现文字环绕 -->
 [![最新发行](https://img.shields.io/github/v/release/Bacillusf/ReKernelFlasher?label=Release&logo=github)](https://github.com/Bacillusf/ReKernelFlasher/releases/tag/v2.8)
 [![协议: GPLv3.0](https://img.shields.io/badge/License-GPLv3.0-orange?logo=gnu)](https://www.gnu.org/licenses/quick-guide-gplv3.html)
+[![官方网站](https://img.shields.io/badge/官网-reflasher.site-FF9800?logo=googlechrome&logoColor=white)](https://reflasher.site)
 [![Telegram 官方群组](https://img.shields.io/badge/Telegram-官方群组-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://t.me/ReKernelFlasher)
 <img align="right" width="100" src="./docs/RI.svg" alt="Kernel Flasher Logo" style="display:block; margin: 0; vertical-align: bottom;">
 
