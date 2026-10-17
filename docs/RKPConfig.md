@@ -1,6 +1,6 @@
 # RKPConfig（百宝箱）
 
-从独立应用 **True RKP** 移植进本项目的页面，入口在 **设置 → 百宝箱 → RKPConfig**。
+从独立应用 **True RKP**（注:TrueRKP为ReKernelFlasher团队的测试项） 移植进本项目的页面，入口在 **设置 → 百宝箱 → RKPConfig**。
 功能与独立版保持一致：读取/应用 RKP 配置、续期签发、查看状态、生成 CSR、校验证书、
 工程模式、清空数据、清空/复制日志、设置 su 路径、日志落盘。
 
@@ -195,16 +195,6 @@ keyPassword=***
 cd items/RekernelFlasher
 ./gradlew :app:assembleRelease        # 需要 keystore.properties 存在
 ```
-
-### 唯一一次失败：lint 依赖下载超时（非代码问题）
-
-第一次 `assembleRelease` 失败在 `:app:lintVitalAnalyzeRelease`，原因是
-`intellij-core-31.13.2.jar` 与 `kotlin-compiler-31.13.2.jar` 从镜像下载**读超时**（瞬时网络问题）。
-重试即通过；若以后再遇到，两种处理：
-
-* 直接重试（本次就是重试后成功的）；
-* 或临时跳过：`./gradlew :app:assembleRelease -x lintVitalAnalyzeRelease`；
-* 或永久关闭 release lint：在 `android { }` 里加 `lint { checkReleaseBuilds = false }`。
 
 ### 真机行为
 
