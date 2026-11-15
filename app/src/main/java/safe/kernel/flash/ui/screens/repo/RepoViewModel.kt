@@ -93,6 +93,10 @@ class RepoItem(
 ) {
     var isLatest by mutableStateOf(false)
 
+    /** 特性 chips 的展示文案（IN→BetterNet / DS→DroidSpace / LZ4→Lz4-Zarm）。 */
+    val featureLabels: List<String>
+        get() = features.map { RepoParser.featureLabel(it) }
+
     /** 卡片上第一个红胶囊：管理器:管理器版本。社区源允许「无管理器」。 */
     val managerVersion: String
         get() {
@@ -119,6 +123,8 @@ class RepoItem(
             manager?.let { append(it).append(' ') }
             managerVer?.let { append(it).append(' ') }
             features.forEach { append(it).append(' ') }
+            // 展示名也进索引，搜 BetterNet / DroidSpace / Lz4-Zarm 同样命中
+            featureLabels.forEach { append(it).append(' ') }
             notes?.let { append(it).append(' ') }
             authorLogin?.let { append(it).append(' ') }
             append(kind.label).append(' ')
@@ -203,6 +209,8 @@ class RepoViewModel : ViewModel() {
     var pendingFlashItem by mutableStateOf<RepoItem?>(null)
         private set
     var infoItem by mutableStateOf<RepoItem?>(null)
+        private set
+    var downloadRequestItem by mutableStateOf<RepoItem?>(null)
         private set
 
     val items: List<RepoItem>
@@ -309,6 +317,15 @@ class RepoViewModel : ViewModel() {
 
     fun hideInfo() {
         infoItem = null
+    }
+
+    /** 社区源：点下载先把信息摆出来，滑到底部确认后才真正开始下载。 */
+    fun requestDownload(item: RepoItem) {
+        downloadRequestItem = item
+    }
+
+    fun cancelDownloadRequest() {
+        downloadRequestItem = null
     }
 
     fun download(context: Context, item: RepoItem) {

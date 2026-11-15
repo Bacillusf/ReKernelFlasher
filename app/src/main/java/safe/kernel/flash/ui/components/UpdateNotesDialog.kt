@@ -40,10 +40,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import safe.kernel.flash.R
 import safe.kernel.flash.ui.theme.softShadow
 
 /**
@@ -106,18 +108,18 @@ fun UpdateNotesDialog(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "发现新版本 v$version",
+                            text = stringResource(R.string.update_dialog_title, version),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "更新说明",
+                            text = stringResource(R.string.update_dialog_notes),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "关闭")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.repo_close))
                     }
                 }
 
@@ -130,7 +132,7 @@ fun UpdateNotesDialog(
                         .padding(horizontal = 18.dp, vertical = 12.dp)
                 ) {
                     MarkdownBody(
-                        markdown = notes.ifBlank { "该版本没有填写更新说明。" },
+                        markdown = notes.ifBlank { stringResource(R.string.update_dialog_empty) },
                         textColor = MaterialTheme.colorScheme.onSurface,
                         mutedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         accentColor = MaterialTheme.colorScheme.primary
@@ -146,7 +148,11 @@ fun UpdateNotesDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (reachedBottom) "已阅读全部更新说明" else "滑到底部后可更新 ↓",
+                        text = if (reachedBottom) {
+                            stringResource(R.string.update_gate_done)
+                        } else {
+                            stringResource(R.string.update_gate_hint)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = if (reachedBottom) {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -158,7 +164,7 @@ fun UpdateNotesDialog(
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(Modifier.width(8.dp))
-                    DialogButton(buttonText = "取消", onClick = onDismiss)
+                    DialogButton(buttonText = stringResource(R.string.cancel), onClick = onDismiss)
                     Spacer(Modifier.width(6.dp))
                     Button(
                         onClick = onConfirm,
@@ -168,7 +174,7 @@ fun UpdateNotesDialog(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Text("更新", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.update_confirm), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,6 +81,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import safe.kernel.flash.R
 import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.DialogButton
 import safe.kernel.flash.ui.theme.softShadow
@@ -97,7 +102,15 @@ fun RepoContent(navController: NavController) {
     val loadError = viewModel.loadError
     val pendingFlash = viewModel.pendingFlashItem
     val infoItem = viewModel.infoItem
+    val downloadRequestItem = viewModel.downloadRequestItem
     val isOfficial = source == RepoSource.OFFICIAL
+    val sourceLabel = stringResource(
+        if (isOfficial) R.string.repo_source_official else R.string.repo_source_community
+    )
+    val sourceOptions = listOf(
+        stringResource(R.string.repo_source_official),
+        stringResource(R.string.repo_source_community)
+    )
 
     var communityWarnShown by remember { mutableStateOf(false) }
     var showCommunityWarning by remember { mutableStateOf(false) }
@@ -112,15 +125,17 @@ fun RepoContent(navController: NavController) {
         }
     }
 
-    val managerLabels = listOf("全部管理器") + viewModel.managerOptions
+    val allManagersLabel = stringResource(R.string.repo_filter_all_managers)
+    val allVersionsLabel = stringResource(R.string.repo_filter_all_versions)
+    val managerLabels = listOf(allManagersLabel) + viewModel.managerOptions
     val typeLabel = when (viewModel.typeFilter) {
-        TypeFilter.ALL -> "类型"
-        TypeFilter.UNIVERSAL -> "通刷"
-        TypeFilter.ONEPLUS -> "机型"
+        TypeFilter.ALL -> stringResource(R.string.repo_filter_type)
+        TypeFilter.UNIVERSAL -> stringResource(R.string.repo_filter_type_universal)
+        TypeFilter.ONEPLUS -> stringResource(R.string.repo_filter_type_oneplus)
     }
-    val seriesLabel = viewModel.versionKey ?: "版本"
-    val managerLabel = viewModel.managerKey ?: "管理器"
-    val seriesLabels = listOf("全部内核版本") + viewModel.seriesOptions
+    val seriesLabel = viewModel.versionKey ?: stringResource(R.string.repo_filter_version)
+    val managerLabel = viewModel.managerKey ?: stringResource(R.string.repo_filter_manager)
+    val seriesLabels = listOf(allVersionsLabel) + viewModel.seriesOptions
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -128,7 +143,7 @@ fun RepoContent(navController: NavController) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "内核仓库",
+                        text = stringResource(R.string.repo_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -138,7 +153,7 @@ fun RepoContent(navController: NavController) {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回",
+                                contentDescription = stringResource(R.string.back),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -148,7 +163,7 @@ fun RepoContent(navController: NavController) {
                     IconButton(onClick = {}) {
                         Icon(
                             Icons.Filled.Cloud,
-                            contentDescription = "云端",
+                            contentDescription = stringResource(R.string.repo_cloud),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -171,7 +186,7 @@ fun RepoContent(navController: NavController) {
                     value = viewModel.query,
                     onValueChange = { viewModel.updateQuery(it) },
                     modifier = Modifier.weight(1f),
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "搜索") },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.repo_search)) },
                     singleLine = true,
                     shape = RoundedCornerShape(18.dp)
                 )
@@ -187,15 +202,15 @@ fun RepoContent(navController: NavController) {
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Icon(Icons.Filled.Refresh, contentDescription = "刷新")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.repo_refresh))
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterDropdown(
-                    label = source.label,
-                    options = RepoSource.entries.map { it.label },
+                    label = sourceLabel,
+                    options = sourceOptions,
                     onSelect = { viewModel.selectSource(context, RepoSource.entries[it]) },
                     modifier = Modifier.weight(1f)
                 )
@@ -230,6 +245,7 @@ fun RepoContent(navController: NavController) {
             }
             Spacer(Modifier.height(10.dp))
             SourceBanner(
+                sourceLabel = sourceLabel,
                 source = source,
                 resultCount = items.size,
                 universalCount = viewModel.universalCount,
@@ -239,7 +255,7 @@ fun RepoContent(navController: NavController) {
             Spacer(Modifier.height(10.dp))
             loadError?.let {
                 Text(
-                    text = "加载失败: $it",
+                    text = stringResource(R.string.repo_load_error, it),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -255,7 +271,7 @@ fun RepoContent(navController: NavController) {
                             CircularProgressIndicator()
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "正在获取${source.label}列表...",
+                                stringResource(R.string.repo_loading, sourceLabel),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -267,7 +283,7 @@ fun RepoContent(navController: NavController) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "暂无匹配的内核包",
+                            stringResource(R.string.repo_empty),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -282,7 +298,13 @@ fun RepoContent(navController: NavController) {
                             RepoCard(
                                 item = item,
                                 state = viewModel.downloadStates[item.url],
-                                onDownload = { viewModel.download(context, item) },
+                                onDownload = {
+                                    if (item.source == RepoSource.COMMUNITY) {
+                                        viewModel.requestDownload(item)
+                                    } else {
+                                        viewModel.download(context, item)
+                                    }
+                                },
                                 onInfo = if (item.source == RepoSource.COMMUNITY) {
                                     { viewModel.showInfo(item) }
                                 } else {
@@ -299,11 +321,10 @@ fun RepoContent(navController: NavController) {
     if (showCommunityWarning) {
         AnimatedConfirmDialog(
             visible = true,
-            title = "社区源提示",
-            message = "社区源内的资源由用户上传，未经官方验证。\n\n请谨慎使用，注意鉴别，认准作者。" +
-                "刷写前建议先备份 boot / dtbo，并确认机型与内核版本匹配。",
-            confirmText = "我已知晓",
-            cancelText = "返回官方源",
+            title = stringResource(R.string.repo_warn_title),
+            message = stringResource(R.string.repo_warn_body),
+            confirmText = stringResource(R.string.repo_warn_confirm),
+            cancelText = stringResource(R.string.repo_warn_back),
             onConfirm = { showCommunityWarning = false },
             onDismiss = {
                 showCommunityWarning = false
@@ -314,16 +335,32 @@ fun RepoContent(navController: NavController) {
     }
 
     infoItem?.let { item ->
-        CommunityInfoDialog(item = item, onDismiss = { viewModel.hideInfo() })
+        CommunityInfoDialog(
+            item = item,
+            onDismiss = { viewModel.hideInfo() },
+            onDownload = null
+        )
     }
 
+    downloadRequestItem?.let { item ->
+        CommunityInfoDialog(
+            item = item,
+            onDismiss = { viewModel.cancelDownloadRequest() },
+            onDownload = {
+                viewModel.cancelDownloadRequest()
+                viewModel.download(context, item)
+            }
+        )
+    }
+
+    val savedToast = stringResource(R.string.repo_saved)
     pendingFlash?.let { item ->
         AnimatedConfirmDialog(
             visible = true,
-            title = "下载完成",
-            message = "${item.filename}\n\n是否刷写到活跃槽位？",
-            confirmText = "刷写",
-            cancelText = "取消",
+            title = stringResource(R.string.repo_flash_confirm_title),
+            message = stringResource(R.string.repo_flash_confirm_body, item.filename),
+            confirmText = stringResource(R.string.flash),
+            cancelText = stringResource(R.string.cancel),
             onConfirm = {
                 viewModel.clearPending()
                 val suffix = viewModel.flashToActiveSlot(item)
@@ -333,7 +370,7 @@ fun RepoContent(navController: NavController) {
             },
             onDismiss = {
                 viewModel.clearPending()
-                Toast.makeText(context, "已保存到 /sdcard/Download", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, savedToast, Toast.LENGTH_SHORT).show()
             },
             destructive = true
         )
@@ -342,6 +379,7 @@ fun RepoContent(navController: NavController) {
 
 @Composable
 private fun SourceBanner(
+    sourceLabel: String,
     source: RepoSource,
     resultCount: Int,
     universalCount: Int,
@@ -350,9 +388,9 @@ private fun SourceBanner(
 ) {
     val accent = if (source == RepoSource.OFFICIAL) OfficialGreen else CommunityOrange
     val title = if (source == RepoSource.OFFICIAL) {
-        "官方源 · 内核通刷 $universalCount + OnePlus机型 $onePlusCount"
+        stringResource(R.string.repo_banner_official, universalCount, onePlusCount)
     } else {
-        "社区源 · 用户上传，未经官方验证"
+        stringResource(R.string.repo_banner_community)
     }
     Column(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -367,8 +405,8 @@ private fun SourceBanner(
         }
         Spacer(Modifier.height(2.dp))
         Text(
-            text = "共 $resultCount 个内核包" +
-                (fetchedAt?.let { " · 数据更新于 ${RepoTime.clock(it)}" } ?: ""),
+            text = stringResource(R.string.repo_count, resultCount) +
+                (fetchedAt?.let { " · " + stringResource(R.string.repo_updated_at, RepoTime.clock(it)) } ?: ""),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -463,12 +501,12 @@ private fun RepoCard(
         Column(Modifier.padding(14.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 when (item.source) {
-                    RepoSource.OFFICIAL -> TagBadge("官方", OfficialGreen)
-                    RepoSource.COMMUNITY -> TagBadge("社区", CommunityOrange)
+                    RepoSource.OFFICIAL -> TagBadge(stringResource(R.string.repo_badge_official), OfficialGreen)
+                    RepoSource.COMMUNITY -> TagBadge(stringResource(R.string.repo_badge_community), CommunityOrange)
                 }
                 when (item.kind) {
-                    RepoKind.UNIVERSAL -> TagBadge("内核通刷", UniversalBlue)
-                    RepoKind.ONEPLUS -> TagBadge("OnePlus机型", OnePlusRed)
+                    RepoKind.UNIVERSAL -> TagBadge(stringResource(R.string.repo_kind_universal), UniversalBlue)
+                    RepoKind.ONEPLUS -> TagBadge(stringResource(R.string.repo_kind_oneplus), OnePlusRed)
                     RepoKind.COMMUNITY -> Unit
                 }
             }
@@ -483,7 +521,10 @@ private fun RepoCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Latest ${item.manager ?: "未知管理器"} Anykernel3",
+                        text = stringResource(
+                            R.string.repo_latest_label,
+                            item.manager ?: stringResource(R.string.repo_info_manager)
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFFFB300),
                         fontWeight = FontWeight.SemiBold
@@ -503,13 +544,13 @@ private fun RepoCard(
                 RedTag(item.managerVersion)
                 RedTag(item.line2)
             }
-            if (item.features.isNotEmpty()) {
+            if (item.featureLabels.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    item.features.forEach { tag ->
+                    item.featureLabels.forEach { tag ->
                         Box(
                             modifier = Modifier
                                 .background(
@@ -573,7 +614,7 @@ private fun RepoCard(
                     ) {
                         Icon(
                             Icons.Filled.Info,
-                            contentDescription = "资源信息",
+                            contentDescription = stringResource(R.string.repo_info_title),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -592,7 +633,7 @@ private fun RepoCard(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = if (completed) "已下载" else "下载",
+                        text = if (completed) stringResource(R.string.repo_downloaded) else stringResource(R.string.download),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -629,8 +670,20 @@ private fun RedTag(text: String) {
 }
 
 @Composable
-private fun CommunityInfoDialog(item: RepoItem, onDismiss: () -> Unit) {
+private fun CommunityInfoDialog(
+    item: RepoItem,
+    onDismiss: () -> Unit,
+    onDownload: (() -> Unit)?
+) {
     val context = LocalContext.current
+    val hashCopiedToast = stringResource(R.string.repo_hash_copied)
+    val linkErrorToast = stringResource(R.string.repo_link_error)
+    val scrollState = rememberScrollState()
+    val reachedBottom by remember {
+        derivedStateOf {
+            scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue - 12
+        }
+    }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -646,13 +699,13 @@ private fun CommunityInfoDialog(item: RepoItem, onDismiss: () -> Unit) {
             Column(Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "资源信息",
+                        text = stringResource(R.string.repo_info_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "关闭")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.repo_close))
                     }
                 }
                 Text(
@@ -665,45 +718,81 @@ private fun CommunityInfoDialog(item: RepoItem, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Column(
                     modifier = Modifier
-                        .heightIn(max = 460.dp)
-                        .verticalScroll(rememberScrollState())
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(scrollState)
                 ) {
-                    InfoRow("适用机型 / 内核版本", item.deviceModel ?: "未填写")
-                    InfoRow("管理器", item.manager ?: "无")
-                    InfoRow("管理器版本", item.managerVer ?: "—")
-                    InfoRow("内核版本", item.kernelVersion ?: "—")
-                    InfoRow("特性", item.features.joinToString(" / ").ifEmpty { "未填写" })
-                    InfoRow("体积", item.sizeHuman ?: "—")
-                    InfoRow("上传时间", RepoTime.full(item.publishedAt))
+                    InfoRow(stringResource(R.string.repo_info_device), item.deviceModel ?: stringResource(R.string.repo_info_empty))
+                    InfoRow(stringResource(R.string.repo_info_manager), item.manager ?: stringResource(R.string.repo_info_none))
+                    InfoRow(stringResource(R.string.repo_info_manager_version), item.managerVer ?: "—")
+                    InfoRow(stringResource(R.string.kernel_version), item.kernelVersion ?: "—")
+                    InfoRow(stringResource(R.string.repo_info_features), item.featureLabels.joinToString(" / ").ifEmpty { stringResource(R.string.repo_info_empty) })
+                    InfoRow(stringResource(R.string.repo_info_size), item.sizeHuman ?: "—")
+                    InfoRow(stringResource(R.string.repo_info_upload_time), RepoTime.full(item.publishedAt))
                     if (!item.notes.isNullOrBlank()) {
-                        InfoRow("补充说明", item.notes)
+                        InfoRow(stringResource(R.string.repo_info_notes), item.notes)
                     }
                     InfoRow(
-                        label = "上传者",
-                        value = "@" + (item.authorLogin ?: "未知"),
-                        onClick = item.authorUrl?.let { url -> { openUrl(context, url) } }
+                        label = stringResource(R.string.repo_info_author),
+                        value = "@" + (item.authorLogin ?: stringResource(R.string.repo_unknown)),
+                        onClick = item.authorUrl?.let { url -> { openUrl(context, url, linkErrorToast) } }
                     )
                     InfoRow("SHA-256", item.sha256 ?: "—", monospace = true)
                 }
-                Spacer(Modifier.height(12.dp))
+                if (onDownload != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = if (reachedBottom) {
+                            stringResource(R.string.repo_gate_download_done)
+                        } else {
+                            stringResource(R.string.repo_gate_download_hint)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (reachedBottom) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DialogButton(buttonText = "复制哈希", onClick = {
+                    DialogButton(buttonText = stringResource(R.string.repo_copy_hash), onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
                             as? ClipboardManager
                         val hash = item.sha256
                         if (clipboard != null && !hash.isNullOrBlank()) {
                             clipboard.setPrimaryClip(ClipData.newPlainText("SHA-256", hash))
-                            Toast.makeText(context, "已复制 SHA-256", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, hashCopiedToast, Toast.LENGTH_SHORT).show()
                         }
                     })
                     item.githubUrl?.let { url ->
-                        DialogButton(buttonText = "仓库页", onClick = { openUrl(context, url) })
+                        DialogButton(buttonText = stringResource(R.string.repo_repo_page), onClick = { openUrl(context, url, linkErrorToast) })
                     }
                     Spacer(Modifier.weight(1f))
-                    DialogButton(buttonText = "关闭", onClick = onDismiss)
+                    DialogButton(buttonText = stringResource(R.string.repo_close), onClick = onDismiss)
+                    if (onDownload != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Button(
+                            onClick = onDownload,
+                            enabled = reachedBottom,
+                            shape = RoundedCornerShape(16.dp),
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.download), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
@@ -742,11 +831,11 @@ private fun InfoRow(
     }
 }
 
-private fun openUrl(context: Context, url: String) {
+private fun openUrl(context: Context, url: String, errorMessage: String) {
     if (url.isBlank()) return
     runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }.onFailure {
-        Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
     }
 }

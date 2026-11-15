@@ -82,6 +82,18 @@ internal object RepoParser {
         return major * 1000 + minor
     }
 
+    /**
+     * 特性 token 的展示名。官方源的三个缩写按产品使用习惯展开，其余 token 原样大写展示。
+     * 索引里同时收录缩写与展示名，所以搜 "betternet" 或 "IN" 都能命中。
+     */
+    private val FEATURE_LABELS = mapOf(
+        "IN" to "BetterNet",
+        "DS" to "DroidSpace",
+        "LZ4" to "Lz4-Zarm",
+    )
+
+    fun featureLabel(token: String): String = FEATURE_LABELS[token.uppercase()] ?: token
+
     fun featureRank(feature: String): Int {
         val index = FEATURE_ORDER.indexOf(feature.uppercase())
         return if (index < 0) 80 else index

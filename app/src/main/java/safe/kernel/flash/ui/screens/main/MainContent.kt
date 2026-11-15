@@ -39,12 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
+import safe.kernel.flash.R
 import safe.kernel.flash.ui.components.Card
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.DataRow
@@ -84,12 +86,12 @@ fun ColumnScope.MainContent(
     }
     Spacer(Modifier.height(12.dp))
 
-    DataCard(title = "设备") {
+    DataCard(title = stringResource(R.string.device)) {
         val cardWidth = remember { mutableIntStateOf(0) }
-        DataRow("型号", "${Build.MODEL} (${Build.DEVICE})", mutableMaxWidth = cardWidth)
-        DataRow("构建版本", Build.ID, mutableMaxWidth = cardWidth)
-        DataRow("应用版本", viewModel.appVersion, mutableMaxWidth = cardWidth)
-        if (viewModel.isAb) DataRow("槽位后缀", viewModel.slotSuffix, mutableMaxWidth = cardWidth)
+        DataRow(stringResource(R.string.model), "${Build.MODEL} (${Build.DEVICE})", mutableMaxWidth = cardWidth)
+        DataRow(stringResource(R.string.build_number), Build.ID, mutableMaxWidth = cardWidth)
+        DataRow(stringResource(R.string.app_version), viewModel.appVersion, mutableMaxWidth = cardWidth)
+        if (viewModel.isAb) DataRow(stringResource(R.string.slot_suffix), viewModel.slotSuffix, mutableMaxWidth = cardWidth)
         if (viewModel.halInfo.isNotEmpty()) DataRow("Boot HAL", viewModel.halInfo, mutableMaxWidth = cardWidth)
         if (viewModel.susfsVersion != "v0.0.0" && viewModel.susfsVersion != "Invalid") {
             DataRow("SUSFS", viewModel.susfsVersion, mutableMaxWidth = cardWidth)
@@ -119,7 +121,7 @@ fun ColumnScope.MainContent(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "内核版本",
+                    text = stringResource(R.string.kernel_version),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -167,7 +169,7 @@ private fun UpdateBanner(viewModel: MainViewModel) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "发现新版本 v${viewModel.updateVersion}",
+                    stringResource(R.string.update_banner_title, viewModel.updateVersion),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -192,7 +194,7 @@ private fun UpdateBanner(viewModel: MainViewModel) {
                     onClick = { showNotes = true },
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                ) { Text("下载更新") }
+                ) { Text(stringResource(R.string.update_download)) }
                 Button(
                     onClick = { viewModel.updateAvailable = false },
                     shape = RoundedCornerShape(16.dp),
@@ -201,7 +203,7 @@ private fun UpdateBanner(viewModel: MainViewModel) {
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                     border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                ) { Text("忽略") }
+                ) { Text(stringResource(R.string.update_ignore)) }
             }
         }
     }
@@ -243,7 +245,7 @@ private fun RootStatusPanel(viewModel: MainViewModel) {
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Root 已激活",
+                    text = stringResource(R.string.root_active),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold

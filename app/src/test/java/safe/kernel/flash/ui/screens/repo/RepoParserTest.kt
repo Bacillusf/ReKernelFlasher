@@ -253,4 +253,48 @@ class RepoParserTest {
         assertEquals(1, items.size)
         assertEquals("6.6.x", items[0].kernelSeries)
     }
+
+    @Test
+    fun featureLabelsExpandTheThreeOfficialAbbreviations() {
+        // 官方源：IN → BetterNet / DS → DroidSpace / LZ4 → Lz4-Zarm，其余 token 原样
+        assertEquals("BetterNet", RepoParser.featureLabel("IN"))
+        assertEquals("DroidSpace", RepoParser.featureLabel("DS"))
+        assertEquals("Lz4-Zarm", RepoParser.featureLabel("LZ4"))
+        assertEquals("SUSFS", RepoParser.featureLabel("SUSFS"))
+        assertEquals("NOSUSFS", RepoParser.featureLabel("NOSUSFS"))
+        assertEquals("SSG", RepoParser.featureLabel("SSG"))
+        // 社区源已经是可读名，过一遍映射不会变样
+        assertEquals("DroidSpace", RepoParser.featureLabel("DroidSpace"))
+        assertEquals("UFW-Support", RepoParser.featureLabel("UFW-Support"))
+
+        val item = RepoParser.parseOfficial(officialSample).first { it.filename.contains("AK3_BAKASU_6.6.118") }
+        assertEquals(
+            listOf("SUSFS", "KPN", "Lz4-Zarm", "ADIOS", "DroidSpace", "BetterNet", "BBG"),
+            item.featureLabels
+        )
+    }
+
+    @Test
+    fun searchIndexAcceptsBothAbbreviationAndLabel() {
+        val item = RepoParser.parseOfficial(officialSample).first { it.filename.contains("AK3_BAKASU_6.6.118") }
+        // 缩写与展示名都要能搜到
+        assertTrue(item.searchBlob.contains(" betternet"))
+        assertTrue(item.searchBlob.contains(" droidspace"))
+        assertTrue(item.searchBlob.contains(" lz4-zarm"))
+        assertTrue(item.searchBlob.contains(" in "))
+    }
+
+    @Test
+    fun communityInfoCarriesEverythingTheDownloadGateNeeds() {
+        // 下载前弹窗要展示：机型 / 管理器 / 特性 / 体积 / 上传者 / 哈希 / 说明 / 时间
+        val item = RepoParser.parseCommunity(communitySample)[0]
+        assertNotNull(item.deviceModel)
+        assertNotNull(item.featureLabels)
+        assertNotNull(item.sizeHuman)
+        assertNotNull(item.authorLogin)
+        assertNotNull(item.sha256)
+        assertNotNull(item.notes)
+        assertNotNull(item.publishedAt)
+        assertEquals(listOf("DroidSpace", "UFW-Support", "NTsync"), item.featureLabels)
+    }
 }

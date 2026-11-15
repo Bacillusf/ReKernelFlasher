@@ -58,7 +58,7 @@ fun ColumnScope.SettingsContent(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ListItem(
             title = stringResource(R.string.check_for_updates),
-            subtitle = "检查是否有新版本可用",
+            subtitle = stringResource(R.string.settings_check_update_subtitle),
             leadingIcon = Icons.Filled.Download,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.primaryContainer,
@@ -99,7 +99,7 @@ fun ColumnScope.SettingsContent(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Text(
-                    "发现版本 v${viewModel.settingsUpdateVersion}",
+                    stringResource(R.string.update_banner_title, viewModel.settingsUpdateVersion),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -142,7 +142,7 @@ fun ColumnScope.SettingsContent(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
                 Text(
-                    "已是最新版本 v${viewModel.settingsUpdateVersion}",
+                    stringResource(R.string.settings_up_to_date, viewModel.settingsUpdateVersion),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -156,7 +156,7 @@ fun ColumnScope.SettingsContent(
                         ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("重新安装")
+                        Text(stringResource(R.string.reinstall))
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
@@ -191,7 +191,7 @@ fun ColumnScope.SettingsContent(
                         .padding(16.dp, 14.dp, 16.dp, 4.dp)
                 )
                 Text(
-                    "下载中 ${(viewModel.settingsUpdateProgress * 100).toInt()}%",
+                    stringResource(R.string.downloading_percent, (viewModel.settingsUpdateProgress * 100).toInt()),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(16.dp, 0.dp, 16.dp, 12.dp)
@@ -203,7 +203,7 @@ fun ColumnScope.SettingsContent(
 
         ListItem(
             title = stringResource(R.string.auto_backup_settings),
-            subtitle = "刷写前自动备份目标分区",
+            subtitle = stringResource(R.string.settings_auto_backup_subtitle),
             leadingIcon = Icons.Filled.Backup,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.primaryContainer,
@@ -213,7 +213,7 @@ fun ColumnScope.SettingsContent(
         )
         ListItem(
             title = stringResource(R.string.language_settings),
-            subtitle = "选择应用显示语言",
+            subtitle = stringResource(R.string.settings_language_subtitle),
             leadingIcon = Icons.Filled.Language,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.tertiaryContainer,
@@ -223,7 +223,7 @@ fun ColumnScope.SettingsContent(
         )
         ListItem(
             title = stringResource(R.string.log_settings),
-            subtitle = "保存内核日志 (ramoops / dmesg / logcat)",
+            subtitle = stringResource(R.string.settings_log_subtitle),
             leadingIcon = Icons.Filled.Description,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.secondaryContainer,
@@ -233,7 +233,7 @@ fun ColumnScope.SettingsContent(
         )
         ListItem(
             title = stringResource(R.string.advanced_settings),
-            subtitle = "界面缩放等高级选项",
+            subtitle = stringResource(R.string.settings_advanced_subtitle),
             leadingIcon = Icons.Filled.Code,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.surfaceVariant,
@@ -242,8 +242,8 @@ fun ColumnScope.SettingsContent(
             onClick = { navController.navigate("settings/advanced") }
         )
         ListItem(
-            title = "百宝箱",
-            subtitle = "Payload-Dumper 解包等实用工具",
+            title = stringResource(R.string.toolbox_title),
+            subtitle = stringResource(R.string.toolbox_subtitle),
             leadingIcon = Icons.Filled.Build,
             leadingColors = ListItemIconColors(
                 container = MaterialTheme.colorScheme.tertiaryContainer,
@@ -256,9 +256,9 @@ fun ColumnScope.SettingsContent(
     if (viewModel.settingsUpdateError != null) {
         AnimatedConfirmDialog(
             visible = true,
-            title = "更新",
+            title = stringResource(R.string.updates),
             message = viewModel.settingsUpdateError ?: "",
-            confirmText = "确定",
+            confirmText = stringResource(R.string.confirm),
             cancelText = stringResource(R.string.cancel),
             onConfirm = { viewModel.dismissSettingsUpdateError() },
             onDismiss = { viewModel.dismissSettingsUpdateError() }
