@@ -31,7 +31,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +48,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.ui.components.Card
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.DataRow
+import safe.kernel.flash.ui.components.UpdateNotesDialog
 
 @OptIn(ExperimentalSerializationApi::class)
 @Composable
@@ -135,6 +139,8 @@ fun ColumnScope.MainContent(
 @OptIn(ExperimentalSerializationApi::class)
 @Composable
 private fun UpdateBanner(viewModel: MainViewModel) {
+    var showNotes by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -183,7 +189,7 @@ private fun UpdateBanner(viewModel: MainViewModel) {
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    onClick = { viewModel.startDownload() },
+                    onClick = { showNotes = true },
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) { Text("下载更新") }
@@ -199,6 +205,17 @@ private fun UpdateBanner(viewModel: MainViewModel) {
             }
         }
     }
+
+    UpdateNotesDialog(
+        visible = showNotes,
+        version = viewModel.updateVersion,
+        notes = viewModel.updateBody,
+        onConfirm = {
+            showNotes = false
+            viewModel.startDownload()
+        },
+        onDismiss = { showNotes = false }
+    )
 }
 
 @OptIn(ExperimentalSerializationApi::class)

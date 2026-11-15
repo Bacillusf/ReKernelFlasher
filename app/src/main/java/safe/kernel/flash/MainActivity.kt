@@ -587,7 +587,6 @@ class MainActivity : ComponentActivity() {
                 executableFiles += copyNativeBinary("busybox") // BusyBox v1.36.1.1
                 updateStartupProgress(0.88f, "正在准备脚本和解包工具")
                 executableFiles += copyAsset("mkbootfs")
-                executableFiles += copyAsset("ksuinit")
                 executableFiles += copyAsset("payload-dumper-go")
                 executableFiles += copyAsset("flash_ak3.sh")
                 executableFiles += copyAsset("flash_ak3_mkbootfs.sh")

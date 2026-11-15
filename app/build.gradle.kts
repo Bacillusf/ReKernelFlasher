@@ -19,8 +19,8 @@ android {
         applicationId = "safe.kernel.flash"
         minSdk = 29
         targetSdk = 36
-        versionCode = 20800
-        versionName = "2.8"
+        versionCode = 20900
+        versionName = "2.9"
 
         javaCompileOptions {
             annotationProcessorOptions {
@@ -141,4 +141,5 @@ android {
         implementation(libs.retrofit)
         implementation(libs.converter.gson)
         implementation(libs.miuix.blur)
+        testImplementation(libs.junit)
     }

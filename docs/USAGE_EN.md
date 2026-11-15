@@ -69,9 +69,7 @@ On the "Flashing" page, tap the "Flash" button to enter the flashing page:
 
 4. **Important note**: When flashing AK3, prefer the "Flash AK3" option. Only consider "Flash AK3 Zip (mkbootfs)" if problems occur. This option is planned to be deprecated starting from v3.0 (30000).
 
-5. **About "Flash KernelSU LKM Driver"**: This feature is inherited from the upstream [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) and is not recommended because it may cause problems. It is planned to be deprecated in v2.9 (20900).
-
-6. **Flash partition image**: After entering, you can see the preset partitions we provide: `boot`, `dtbo`, `init_boot`, `recovery`, `system_dlkm`, `vbmeta`, `vendor_boot`. Tap the partition you want to flash, select the corresponding `*.img` / `*.bin` file, and a confirmation dialog will pop up. Tap confirm to continue flashing.
+5. **Flash partition image**: After entering, you can see the preset partitions we provide: `boot`, `dtbo`, `init_boot`, `recovery`, `system_dlkm`, `vbmeta`, `vendor_boot`. Tap the partition you want to flash, select the corresponding `*.img` / `*.bin` file, and a confirmation dialog will pop up. Tap confirm to continue flashing.
 
    <a href="./pictures/7.png"><img src="./pictures/7.png" alt="Figure 7 · Flash Partition" width="300"></a>
 

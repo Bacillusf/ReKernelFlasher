@@ -69,9 +69,7 @@
 
 4. **重要提示**：刷入 AK3 时请尽量使用「刷写 AK3」选项，只有出现问题时才考虑使用「刷入 AK3 压缩包（mkbootfs）」。此选项计划于 v3.0（30000）中开始废弃。
 
-5. **关于「刷入 KernelSU LKM Driver」**：此功能是从上游分支 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 继承而来，不建议使用，因为它可能导致问题，计划将在 v2.9（20900）中废弃。
-
-6. **刷入分区镜像**：点击进入之后可以看到我们为您提供的预设分区 `boot`、`dtbo`、`init_boot`、`recovery`、`system_dlkm`、`vbmeta`、`vendor_boot`。点击您想要刷入的分区，选择对应的 `*.img`、`*.bin` 文件，此时会弹出二次确认弹窗，点击确认后继续刷写。
+5. **刷入分区镜像**：点击进入之后可以看到我们为您提供的预设分区 `boot`、`dtbo`、`init_boot`、`recovery`、`system_dlkm`、`vbmeta`、`vendor_boot`。点击您想要刷入的分区，选择对应的 `*.img`、`*.bin` 文件，此时会弹出二次确认弹窗，点击确认后继续刷写。
 
    <a href="./pictures/7.png"><img src="./pictures/7.png" alt="图七 · 刷写分区" width="300"></a>
 

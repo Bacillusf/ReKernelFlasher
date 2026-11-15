@@ -31,7 +31,6 @@
     <string name="flash_ak3_zip">刷寫 AK3 Zip</string>
     <string name="flash_ak3_zip_mkbootfs">使用 mkbootfs 刷寫 AK3 Zip</string>
     <string name="flash_partition_image">刷寫分區映像</string>
-    <string name="flash_ksu_lkm">刷寫 KernelSU LKM 驅動</string>
     <string name="restore">恢復</string>
     <string name="check_kernel_version">檢查內核版本</string>
     <string name="mount_vendor_dlkm">掛載 Vendor DLKM</string>

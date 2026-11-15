@@ -111,12 +111,6 @@ fun ColumnScope.SlotFlashContent(
                 viewModel.showConfirmDialog()
             })
             Spacer(Modifier.height(8.dp))
-            FlashButton(stringResource(R.string.flash_ksu_lkm), "ko", callback = { uri ->
-                viewModel.flashActionType = "flashKsuDriver"
-                viewModel.flashActionURI = uri
-                viewModel.showConfirmDialog()
-            })
-            Spacer(Modifier.height(8.dp))
             FilledTonalButton(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -316,7 +310,7 @@ fun ColumnScope.SlotFlashContent(
                 val partitionName = viewModel.flashActionPartName ?: "unknown"
                 PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)?.path ?: "$partitionName$slotSuffix"
             }
-            "flashAk3", "flashAk3_mkbootfs", "flashKsuDriver" -> viewModel.boot.absolutePath
+            "flashAk3", "flashAk3_mkbootfs" -> viewModel.boot.absolutePath
             else -> "本机"
         }
 
@@ -354,7 +348,6 @@ fun ColumnScope.SlotFlashContent(
             "flashImage" -> "确定要将 $sourcePath 刷写到 $destPath 吗？"
             "flashAk3" -> "确定要将 $sourcePath 刷写到 $destPath 吗？"
             "flashAk3_mkbootfs" -> "确定要将 $sourcePath 以 mkbootfs 方式\n刷写到 $destPath 吗？"
-            "flashKsuDriver" -> "确定要将 $sourcePath 作为 KernelSU 驱动\n刷写到 $destPath 吗？"
             else -> "确定要将 $sourcePath 刷写到本机吗？"
         }
         val confirmText = if (isAk3 && ak3Info != null && !ak3Info.isCompatible) "强行刷写（不兼容）" else "刷写"
@@ -388,12 +381,6 @@ fun ColumnScope.SlotFlashContent(
                                 popUpTo("slot$slotSuffix")
                             }
                             viewModel.flashAk3_mkbootfs(context, uri)
-                        }
-                        "flashKsuDriver" -> {
-                            navController.navigate("slot$slotSuffix/flash/image/flash") {
-                                popUpTo("slot$slotSuffix")
-                            }
-                            viewModel.flashKsuDriver(context, uri)
                         }
                         "flashImage" -> {
                             navController.navigate("slot$slotSuffix/flash/image/flash") {

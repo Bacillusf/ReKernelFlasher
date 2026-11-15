@@ -117,6 +117,7 @@ class MainViewModel(
     var settingsUpdateFound by mutableStateOf(false)
     var settingsUpdateSameVersion by mutableStateOf(false)
     var settingsUpdateVersion by mutableStateOf("")
+    var settingsUpdateBody by mutableStateOf("")
     var settingsUpdateDownloadUrl by mutableStateOf("")
     var settingsUpdateDownloading by mutableStateOf(false)
     var settingsUpdateProgress by mutableFloatStateOf(0f)
@@ -141,6 +142,7 @@ class MainViewModel(
             withContext(Dispatchers.Main) {
                 if (info != null) {
                     settingsUpdateVersion = info.version
+                    settingsUpdateBody = info.body
                     settingsUpdateDownloadUrl = info.downloadUrl
                     if (info.version == BuildConfig.VERSION_NAME) {
                         settingsUpdateSameVersion = true

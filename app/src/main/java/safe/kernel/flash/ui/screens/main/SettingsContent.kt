@@ -28,6 +28,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -38,6 +42,7 @@ import safe.kernel.flash.R
 import safe.kernel.flash.ui.components.AnimatedConfirmDialog
 import safe.kernel.flash.ui.components.ListItem
 import safe.kernel.flash.ui.components.ListItemIconColors
+import safe.kernel.flash.ui.components.UpdateNotesDialog
 import safe.kernel.flash.ui.theme.softShadow
 import kotlinx.serialization.ExperimentalSerializationApi
 
@@ -48,6 +53,7 @@ fun ColumnScope.SettingsContent(
     navController: NavController
 ) {
     val context = LocalContext.current
+    var showUpdateNotes by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ListItem(
@@ -101,7 +107,7 @@ fun ColumnScope.SettingsContent(
                 )
                 Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                     Button(
-                        onClick = { viewModel.startSettingsUpdateDownload(context) },
+                        onClick = { showUpdateNotes = true },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         ),
@@ -144,7 +150,7 @@ fun ColumnScope.SettingsContent(
                 )
                 Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                     Button(
-                        onClick = { viewModel.startSettingsUpdateDownload(context) },
+                        onClick = { showUpdateNotes = true },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary
                         ),
@@ -258,4 +264,15 @@ fun ColumnScope.SettingsContent(
             onDismiss = { viewModel.dismissSettingsUpdateError() }
         )
     }
+
+    UpdateNotesDialog(
+        visible = showUpdateNotes,
+        version = viewModel.settingsUpdateVersion,
+        notes = viewModel.settingsUpdateBody,
+        onConfirm = {
+            showUpdateNotes = false
+            viewModel.startSettingsUpdateDownload(context)
+        },
+        onDismiss = { showUpdateNotes = false }
+    )
 }
