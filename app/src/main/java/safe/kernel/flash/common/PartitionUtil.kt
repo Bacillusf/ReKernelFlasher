@@ -57,6 +57,52 @@ object PartitionUtil {
         return findPartitionFstabEntry(context, partitionName)?.fsMgrFlags?.logical == true
     }
 
+    enum class PlatformKind { QUALCOMM, MEDIATEK }
+
+    /**
+     * 返回 (平台类型, 分区节点目录)：
+     * 高通 `/dev/block/bootdevice/by-name`，联发科 `/dev/block/by-name`。
+     */
+    fun detectPlatform(): Pair<PlatformKind, String>? {
+        val manager = fileSystemManager ?: return null
+        return when {
+            manager.getFile("/dev/block/bootdevice/by-name").exists() ->
+                PlatformKind.QUALCOMM to "/dev/block/bootdevice/by-name"
+            manager.getFile("/dev/block/by-name").exists() ->
+                PlatformKind.MEDIATEK to "/dev/block/by-name"
+            else -> null
+        }
+    }
+
+    /** 平台名（用于日志 / 备份元数据，不做界面本地化）。 */
+    fun detectPlatformSource(): Pair<String, String>? =
+        detectPlatform()?.let { (kind, dir) ->
+            (if (kind == PlatformKind.QUALCOMM) "高通" else "联发科") to dir
+        }
+
+    /** 节点目录下实际存在的分区名（排序后返回）。 */
+    fun listAllPartitions(sourceDir: String): List<String> =
+        fileSystemManager?.getFile(sourceDir)?.listFiles()?.map { it.name }?.sorted().orEmpty()
+
+    /** 节点目录下某个分区的完整路径（不保证存在）。 */
+    fun partitionNodePath(partitionName: String): String {
+        val sourceDir = detectPlatformSource()?.second ?: "/dev/block/by-name"
+        return "$sourceDir/$partitionName"
+    }
+
+    /** 按节点名直接取分区节点（by-name 下的那个 symlink）。 */
+    fun findPartitionNode(partitionName: String): ExtendedFile? {
+        val sourceDir = detectPlatformSource()?.second ?: return null
+        val node = fileSystemManager?.getFile(sourceDir, partitionName) ?: return null
+        return if (node.exists()) node else null
+    }
+
+    /** 逻辑分区（dynamic partition）在 /dev/block/mapper 下的映射节点。 */
+    fun findMappedPartitionNode(partitionName: String): ExtendedFile? {
+        val node = fileSystemManager?.getFile("/dev/block/mapper", partitionName) ?: return null
+        return if (node.exists()) node else null
+    }
+
     fun findPartitionBlockDevice(context: Context, partitionName: String, slotSuffix: String): ExtendedFile? {
         var blockDevice: ExtendedFile? = null
         val fstabEntry = findPartitionFstabEntry(context, partitionName)

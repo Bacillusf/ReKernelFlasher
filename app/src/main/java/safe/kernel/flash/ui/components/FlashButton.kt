@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.ExperimentalUnitApi
 import androidx.compose.ui.unit.dp
@@ -41,7 +42,7 @@ fun FlashButton(
     validExtension: String,
     callback: (uri: Uri) -> Unit
 ) {
-    val mainActivity = LocalContext.current as MainActivity
+    val mainActivity = LocalActivity.current as MainActivity
     val result = remember { mutableStateOf<Uri?>(null) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
         result.value = it

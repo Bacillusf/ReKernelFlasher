@@ -54,7 +54,7 @@ fun ColumnScope.SlotContent(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ListItem(
                 title = stringResource(R.string.flash),
-                subtitle = "选择 AK3 / 镜像 / KernelSU 驱动",
+                subtitle = stringResource(R.string.flash_pick_source),
                 leadingIcon = Icons.Filled.Build,
                 leadingColors = ListItemIconColors(
                     container = MaterialTheme.colorScheme.primaryContainer,
@@ -64,7 +64,7 @@ fun ColumnScope.SlotContent(
             )
             ListItem(
                 title = stringResource(R.string.backup),
-                subtitle = "备份当前槽位到本地",
+                subtitle = stringResource(R.string.backup_current_slot),
                 leadingIcon = Icons.Filled.Backup,
                 leadingColors = ListItemIconColors(
                     container = MaterialTheme.colorScheme.tertiaryContainer,
@@ -77,7 +77,7 @@ fun ColumnScope.SlotContent(
             )
             ListItem(
                 title = stringResource(R.string.restore),
-                subtitle = "从历史备份恢复",
+                subtitle = stringResource(R.string.restore_from_history),
                 leadingIcon = Icons.Filled.Restore,
                 leadingColors = ListItemIconColors(
                     container = MaterialTheme.colorScheme.secondaryContainer,
@@ -87,7 +87,7 @@ fun ColumnScope.SlotContent(
             )
             ListItem(
                 title = stringResource(R.string.check_kernel_version),
-                subtitle = "从 boot 镜像提取内核版本",
+                subtitle = stringResource(R.string.kernel_from_boot),
                 leadingIcon = Icons.Filled.Info,
                 leadingColors = ListItemIconColors(
                     container = MaterialTheme.colorScheme.surfaceVariant,

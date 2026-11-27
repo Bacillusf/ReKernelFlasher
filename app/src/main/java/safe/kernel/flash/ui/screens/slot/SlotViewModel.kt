@@ -7,9 +7,11 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
@@ -111,6 +113,49 @@ class SlotViewModel(
     var flashActionType: String = ""
     var flashActionURI: Uri? = null
     var flashActionPartName: String? = null
+
+    // 「展示所有分区」：按平台直接检索分区节点，替代预设分区列表
+    var showAllPartitions by mutableStateOf(false)
+        private set
+    private val _allPartitions: SnapshotStateList<String> = mutableStateListOf()
+    val allPartitions: List<String>
+        get() = _allPartitions
+    var isLoadingAllPartitions by mutableStateOf(false)
+        private set
+
+    fun switchAllPartitionsMode(show: Boolean) {
+        showAllPartitions = show
+        if (show && _allPartitions.isEmpty() && !isLoadingAllPartitions) {
+            loadAllPartitions()
+        }
+    }
+
+    private fun loadAllPartitions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            isLoadingAllPartitions = true
+            try {
+                val source = PartitionUtil.detectPlatformSource()
+                val names = if (source == null) emptyList() else PartitionUtil.listAllPartitions(source.second)
+                val filtered = names.filter { name ->
+                    when {
+                        // A only：全部展示
+                        slotSuffix.isEmpty() -> true
+                        // A 槽：隐藏带 _b 后缀的分区
+                        slotSuffix == "_a" -> !name.endsWith("_b")
+                        // B 槽：隐藏带 _a 后缀的分区
+                        slotSuffix == "_b" -> !name.endsWith("_a")
+                        else -> true
+                    }
+                }
+                _allPartitions.clear()
+                _allPartitions.addAll(filtered)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to list partitions", e)
+            } finally {
+                isLoadingAllPartitions = false
+            }
+        }
+    }
 
     val sha1: String?
         get() = _sha1
@@ -854,6 +899,55 @@ class SlotViewModel(
 
     @OptIn(ExperimentalSerializationApi::class)
     fun flashImage(context: Context, uri: Uri, partitionName: String) {
+        flashImageCore(
+            context = context,
+            uri = uri,
+            displayName = partitionName,
+            resolveNode = { PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix) },
+            isLogical = { PartitionUtil.isPartitionLogical(context, partitionName) },
+            logicalBaseName = partitionName,
+            logicalSuffix = slotSuffix,
+            autoBackup = { AutoBackupManager.backup(context, partitionName, slotSuffix) }
+        )
+    }
+
+    /**
+     * 「展示所有分区」模式：按节点名（如 `init_boot_a`）直接解析并刷写，
+     * 不再拼接槽位后缀，因此也能覆盖预设列表之外的分区。
+     */
+    fun flashImageNode(context: Context, uri: Uri, nodeName: String) {
+        val mappedNode = PartitionUtil.findMappedPartitionNode(nodeName)
+        val (baseName, suffix) = splitSlotSuffix(nodeName)
+        flashImageCore(
+            context = context,
+            uri = uri,
+            displayName = nodeName,
+            resolveNode = { mappedNode ?: PartitionUtil.findPartitionNode(nodeName) },
+            isLogical = { mappedNode != null },
+            logicalBaseName = baseName,
+            logicalSuffix = suffix,
+            autoBackup = { AutoBackupManager.backupNode(context, nodeName) }
+        )
+    }
+
+    private fun splitSlotSuffix(name: String): Pair<String, String> =
+        if (name.endsWith("_a") || name.endsWith("_b")) {
+            name.dropLast(2) to name.takeLast(2)
+        } else {
+            name to ""
+        }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun flashImageCore(
+        context: Context,
+        uri: Uri,
+        displayName: String,
+        resolveNode: () -> ExtendedFile?,
+        isLogical: () -> Boolean,
+        logicalBaseName: String,
+        logicalSuffix: String,
+        autoBackup: () -> Unit
+    ) {
         DaemonService.start(context)
         launch {
             _clearFlash()
@@ -862,33 +956,41 @@ class SlotViewModel(
             if (!isActive) {
                 resetSlot()
             }
-            AutoBackupManager.backup(context, partitionName, slotSuffix)
+            autoBackup()
             val image = fileSystemManager.getFile(context.filesDir, flashFilename!!)
             try {
                 if (image.exists()) {
                     addMessage("Copied $flashFilename")
                     _wasFlashSuccess.value = false
-                    addMessage("Flashing $flashFilename to $partitionName ...")
-                    val blockDevice = PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)
+                    addMessage("Flashing $flashFilename to $displayName ...")
+                    val blockDevice = resolveNode()
                     if (blockDevice != null && blockDevice.exists()) {
-                        if (PartitionUtil.isPartitionLogical(context, partitionName)) {
-                            PartitionUtil.flashLogicalPartition(context, image, blockDevice, partitionName, slotSuffix, hashAlgorithm) { message ->
+                        if (isLogical()) {
+                            PartitionUtil.flashLogicalPartition(
+                                context,
+                                image,
+                                blockDevice,
+                                logicalBaseName,
+                                logicalSuffix,
+                                hashAlgorithm
+                            ) { message ->
                                 addMessage(message)
                             }
                         } else {
                             PartitionUtil.flashBlockDevice(image, blockDevice, hashAlgorithm)
                         }
                     } else {
-                        log(context, "Partition $partitionName was not found", shouldThrow = true)
+                        log(context, "Partition $displayName was not found", shouldThrow = true)
                     }
-                    addMessage("Flashed $flashFilename to $partitionName")
+                    addMessage("Flashed $flashFilename to $displayName")
                     addMessage("Cleaning up ...")
                     clearTmp(context)
                     addMessage("Done.")
                     _wasFlashSuccess.value = true
                     val srcPath = resolveSourcePath(flashUri)
-                    val dest = PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)?.path ?: "$partitionName$slotSuffix"
-                    HistoryManager.record(HistoryEntry.create("刷写 $srcPath -> $dest"))
+                    HistoryManager.record(
+                        HistoryEntry.create("刷写 $srcPath -> ${blockDevice?.path ?: displayName}")
+                    )
                 } else {
                     log(context, "Partition image is missing", shouldThrow = true)
                 }

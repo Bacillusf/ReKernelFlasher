@@ -2,7 +2,7 @@
 Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复 Android 内核镜像。
 基于 [KernelFlasher](https://github.com/fatalcoder524/KernelFlasher) 二次开发，由 [Bacillusf](https://github.com/Bacillusf) 维护。
 <!-- 右侧悬浮SVG图标，width控制图标大小，align="right"实现文字环绕 -->
-[![最新发行](https://img.shields.io/github/v/release/Bacillusf/ReKernelFlasher?label=Release&logo=github)](https://github.com/Bacillusf/ReKernelFlasher/releases/tag/v2.91)
+[![最新发行](https://img.shields.io/github/v/release/Bacillusf/ReKernelFlasher?label=Release&logo=github)](https://github.com/Bacillusf/ReKernelFlasher/releases/tag/v2.92)
 [![协议: GPLv3.0](https://img.shields.io/badge/License-GPLv3.0-orange?logo=gnu)](https://www.gnu.org/licenses/quick-guide-gplv3.html)
 [![官方网站](https://reflasher.site/assets/badge-official.svg)](https://reflasher.site)
 [![Telegram 官方群组](https://img.shields.io/badge/Telegram-官方群组-2CA5E0?style=flat-square&logo=telegram&logoColor=white)](https://t.me/ReKernelFlasher)
@@ -19,7 +19,7 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 ### 首页
 | 功能 | 说明 |
 |---|---|
-| 设备信息 | 显示型号、构建版本、Android 版本、应用版本、内核版本、Root 管理器（KernelSU/Magisk/APatch）、槽位后缀、SUSFS 版本、Boot HAL 版本 |
+| 设备信息 | 显示型号、**平台（高通 / 联发科）**、构建版本、Android 版本、应用版本、内核版本、Root 管理器（KernelSU/Magisk/APatch）、槽位后缀、SUSFS 版本、Boot HAL 版本 |
 | 重启菜单 | 右上角按钮展开，支持重启到系统/Recovery/Bootloader/Download/EDL，每次带确认弹窗 |
 ### 刷写
 | 功能 | 说明 |
@@ -27,7 +27,8 @@ Android 内核刷写工具，支持在已 root 设备上刷写、备份、恢复
 | 槽位管理 | 查看 A/B 槽位信息（可启动、已标记成功、Boot SHA1、镜像格式、ramdisk 信息） |
 | 刷写 AK3 Zip | 选择 AnyKernel3 兼容 zip 刷入 |
 | 刷写 AK3 Zip (mkbootfs) | 以 mkbootfs 模式刷入 AK3 zip |
-| 刷写分区镜像 | 选择 .img 文件刷入指定分区 |
+| 刷写分区镜像 | 选择 .img 文件刷入指定分区（预设列表） |
+| 展示所有分区 | 按平台检索分区节点，列出设备上实际存在的全部分区并直接刷写；A/B 设备自动隐藏另一槽位后缀（A-only 全展示），可一键切回预设列表 |
 | 备份分区 | 选择分区备份到本地 |
 | 恢复备份 | 从历史备份恢复分区 |
 | vendor_dlkm 管理 | 挂载/卸载/映射/取消映射 vendor_dlkm 分区 |

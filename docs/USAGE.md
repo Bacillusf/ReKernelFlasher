@@ -21,6 +21,7 @@
 - `设备 ROOT 管理器`
 - `安卓版本`
 - `设备代号`
+- `平台`（高通 / 联发科，与字库备份使用同一套节点探测）
 - `系统构建版本`
 - `当前槽位`
 - `BootHAL`
@@ -71,6 +72,9 @@
 
 5. **刷入分区镜像**：点击进入之后可以看到我们为您提供的预设分区 `boot`、`dtbo`、`init_boot`、`recovery`、`system_dlkm`、`vbmeta`、`vendor_boot`。点击您想要刷入的分区，选择对应的 `*.img`、`*.bin` 文件，此时会弹出二次确认弹窗，点击确认后继续刷写。
 
+   **展示所有分区**：标题下方的「展示所有分区」按钮会按平台自动检索分区节点（高通 `/dev/block/bootdevice/by-name`、联发科 `/dev/block/by-name`），把设备上实际存在的分区全部列成按钮，点一下即可走同样的刷写流程；再点「切换至预设分区列表」可切回上面的预设列表。
+   槽位过滤规则：在 A 槽打开时隐藏带 `_b` 后缀的分区，在 B 槽打开时隐藏带 `_a` 后缀的分区；A-only 设备不做过滤，全部展示。
+
    <a href="./pictures/7.png"><img src="./pictures/7.png" alt="图七 · 刷写分区" width="300"></a>
 
 ---
@@ -117,7 +121,20 @@
 
 - 进入后会自动检测平台、分区总数、跳过分区以及预计占用空间。
 - 默认备份目录：`/sdcard/ReKernelFlasher/backups/型号字库备份`，支持自定义目录与「重置目录」。
-- 点击「开始字库备份」后会弹出确认弹窗，确认后开始备份，完成后会显示成功 / 跳过 / 失败数量。
+- 扫描完成后，「开始字库备份」右侧的 **信息按钮（ⓘ）** 可打开分区列表，逐个勾选 / 取消勾选要备份的分区，同一个按钮在「全选 / 全不选」之间切换（全选后点一下即全不选）；顶部会实时显示已选分区数与预计占用。
+- 点击「开始字库备份」并确认后进入日志页：顶部是**工作信息**（待备份的分区总数 + 备份目录），备份完成后原地变为**备份结果**（成功 / 跳过 / 失败）。
+- 信息栏下方两条进度条：**总进度**（已备份分区数 / 待备份分区数）和**当前分区进度**（按已写入字节 / 分区大小计算）。
+- 进度条下方是日志区：每完成一个分区会打印 `Backup 'init_boot' ==>[OK]`（失败为 `==>[FAIL]`）。
+- 备份完成后会在备份目录生成 `BPINFO.xml`（Backup Partition Information），用标准 XML 记录每个分区的分区名、源备份节点路径、img 文件名、大小（字节）与 SHA-256 哈希：
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <BackupPartitionInformation version="1" device="PJZ110" platform="高通"
+      source="/dev/block/bootdevice/by-name" backup="/sdcard/ReKernelFlasher/backups/PJZ110字库备份"
+      createdAt="2026-11-27T22:41:07" hashAlgorithm="SHA-256" partitionCount="3" totalSize="134217728">
+    <Partition name="boot" source="/dev/block/bootdevice/by-name/boot" file="boot.img" size="100663296" hash="9f2c1e0b…"/>
+  </BackupPartitionInformation>
+  ```
+- 备份成功后，页面底部会悬浮出现「返回备份设置」按钮（不占布局、不打断滚动），点击后回到设置页并重新扫描。
 
 <a href="./pictures/12.png"><img src="./pictures/12.png" alt="图十二 · 字库备份" width="300"></a>
 

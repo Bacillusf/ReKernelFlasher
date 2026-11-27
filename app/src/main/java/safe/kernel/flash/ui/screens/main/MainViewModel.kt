@@ -52,6 +52,7 @@ class MainViewModel(
     val appVersion: String = BuildConfig.VERSION_NAME
     val appVersionFull: String = "${BuildConfig.VERSION_CODE}/v${BuildConfig.VERSION_NAME}"
     val halInfo: String
+    val platform: PartitionUtil.PlatformKind?
     val susfsVersion: String
     val rootManager: String
     val isAb: Boolean
@@ -198,6 +199,8 @@ class MainViewModel(
         PartitionUtil.init(context, fileSystemManager)
         HistoryManager.init(fileSystemManager)
         AutoBackupManager.init(fileSystemManager)
+        // 与字库备份 / 刷写页「展示所有分区」同一套平台探测：高通 / 联发科
+        platform = PartitionUtil.detectPlatform()?.first
         val bootctl = File(context.filesDir, "bootctl")
         halInfo = runCatching { Shell.cmd("$bootctl hal-info").exec().out[0].substringAfter("HAL Version: ").trim() }
             .recoverCatching { "" }

@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import com.topjohnwu.superuser.Shell
+import com.topjohnwu.superuser.nio.ExtendedFile
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -51,10 +52,6 @@ object AutoBackupManager {
             return null
         }
         try {
-            val timestamp = System.currentTimeMillis() / 1000
-            val dirPath = "$BACKUP_DIR/$timestamp"
-            Shell.cmd("mkdir -p $dirPath").exec()
-
             val blockDevice = PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)
             if (blockDevice == null) {
                 Log.e(TAG, "Partition $partitionName$slotSuffix not found")
@@ -64,28 +61,62 @@ object AutoBackupManager {
                 Log.e(TAG, "Block device ${blockDevice.path} does not exist")
                 return null
             }
-
-            val imgPath = "$dirPath/${partitionName}${slotSuffix}.img"
-            val result = Shell.cmd("dd if=$blockDevice of=$imgPath bs=4096 && sync").exec()
-            if (!result.isSuccess) {
-                Log.e(TAG, "dd failed: ${result.err.joinToString("\n")}")
-                return null
-            }
-            Shell.cmd("chmod 644 $imgPath").exec()
-
-            Shell.cmd("echo \"timestamp: $timestamp\" > $dirPath/backup.yml").exec()
-            Shell.cmd("echo \"partition: $partitionName\" >> $dirPath/backup.yml").exec()
-            Shell.cmd("echo \"slot: $slotSuffix\" >> $dirPath/backup.yml").exec()
-            Shell.cmd("echo \"path: $imgPath\" >> $dirPath/backup.yml").exec()
-
-            addToSummary(AutoBackupRecord.create(timestamp, partitionName, slotSuffix, imgPath))
-
-            Log.d(TAG, "Auto backup success: $imgPath")
-            return imgPath
+            return backupBlockDevice(blockDevice, "$partitionName$slotSuffix", partitionName, slotSuffix)
         } catch (e: Exception) {
             Log.e(TAG, "Auto backup failed: ${e.message}", e)
             return null
         }
+    }
+
+    /** 「展示所有分区」模式：按节点名直接备份（不拼接槽位后缀）。 */
+    @SuppressLint("SdCardPath")
+    fun backupNode(context: Context, nodeName: String): String? {
+        if (!isEnabled.value) {
+            Log.d(TAG, "Auto backup disabled, skipping")
+            return null
+        }
+        try {
+            val node = PartitionUtil.findMappedPartitionNode(nodeName)
+                ?: PartitionUtil.findPartitionNode(nodeName)
+            if (node == null || !node.exists()) {
+                Log.e(TAG, "Partition node $nodeName not found")
+                return null
+            }
+            return backupBlockDevice(node, nodeName, nodeName, "")
+        } catch (e: Exception) {
+            Log.e(TAG, "Auto backup failed: ${e.message}", e)
+            return null
+        }
+    }
+
+    @SuppressLint("SdCardPath")
+    private fun backupBlockDevice(
+        blockDevice: ExtendedFile,
+        fileName: String,
+        partitionName: String,
+        slotSuffix: String
+    ): String? {
+        val timestamp = System.currentTimeMillis() / 1000
+        val dirPath = "$BACKUP_DIR/$timestamp"
+        Shell.cmd("mkdir -p $dirPath").exec()
+
+        val imgPath = "$dirPath/$fileName.img"
+        val result = Shell.cmd("dd if=$blockDevice of=$imgPath bs=4096 && sync").exec()
+        if (!result.isSuccess) {
+            Log.e(TAG, "dd failed: ${result.err.joinToString("\n")}")
+            return null
+        }
+        Shell.cmd("chmod 644 $imgPath").exec()
+
+        Shell.cmd("echo \"timestamp: $timestamp\" > $dirPath/backup.yml").exec()
+        Shell.cmd("echo \"partition: $partitionName\" >> $dirPath/backup.yml").exec()
+        Shell.cmd("echo \"slot: $slotSuffix\" >> $dirPath/backup.yml").exec()
+        Shell.cmd("echo \"path: $imgPath\" >> $dirPath/backup.yml").exec()
+
+        addToSummary(AutoBackupRecord.create(timestamp, partitionName, slotSuffix, imgPath))
+
+        Log.d(TAG, "Auto backup success: $imgPath")
+        return imgPath
     }
 
     /**

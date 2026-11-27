@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Save
@@ -131,14 +132,67 @@ fun ColumnScope.SlotFlashContent(
         } else if (isFlashImage) {
             DataCard(stringResource(R.string.flash_partition_image))
             Spacer(Modifier.height(8.dp))
-            for (partitionName in PartitionUtil.AvailablePartitions) {
-                FlashButton(partitionName, "img", callback = { uri ->
-                    viewModel.flashActionType = "flashImage"
-                    viewModel.flashActionURI = uri
-                    viewModel.flashActionPartName = partitionName
-                    viewModel.showConfirmDialog()
-                })
-                Spacer(Modifier.height(6.dp))
+            // 两个模式：预设分区列表 / 按平台节点检索「所有分区」
+            FilledTonalButton(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                onClick = { viewModel.switchAllPartitionsMode(!viewModel.showAllPartitions) }
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.List,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.padding(6.dp))
+                Text(
+                    stringResource(
+                        if (viewModel.showAllPartitions) R.string.switch_to_preset_partitions
+                        else R.string.show_all_partitions
+                    ),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            if (viewModel.showAllPartitions) {
+                if (viewModel.isLoadingAllPartitions) {
+                    Text(
+                        stringResource(R.string.scanning_partitions),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else if (viewModel.allPartitions.isEmpty()) {
+                    Text(
+                        stringResource(R.string.no_partitions_found),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                for (partitionName in viewModel.allPartitions) {
+                    FlashButton(partitionName, "img", callback = { uri ->
+                        viewModel.flashActionType = "flashImageNode"
+                        viewModel.flashActionURI = uri
+                        viewModel.flashActionPartName = partitionName
+                        viewModel.showConfirmDialog()
+                    })
+                    Spacer(Modifier.height(6.dp))
+                }
+            } else {
+                for (partitionName in PartitionUtil.AvailablePartitions) {
+                    FlashButton(partitionName, "img", callback = { uri ->
+                        viewModel.flashActionType = "flashImage"
+                        viewModel.flashActionURI = uri
+                        viewModel.flashActionPartName = partitionName
+                        viewModel.showConfirmDialog()
+                    })
+                    Spacer(Modifier.height(6.dp))
+                }
             }
         } else if (isBackup) {
             DataCard(stringResource(R.string.backup))
@@ -173,7 +227,7 @@ fun ColumnScope.SlotFlashContent(
             AnimatedConfirmDialog(
                 visible = showBackupConfirm.value,
                 title = "警告",
-                message = "确定要备份所选分区吗？",
+                message = stringResource(R.string.backup_confirm_message),
                 confirmText = stringResource(R.string.backup_now),
                 cancelText = stringResource(R.string.cancel),
                 onConfirm = {
@@ -234,11 +288,11 @@ fun ColumnScope.SlotFlashContent(
                     if (viewModel.wasFlashSuccess.value == true && viewModel.showCautionDialog == true) {
                         AnimatedConfirmDialog(
                             visible = true,
-                            title = "警告",
-                            message = "你已刷写到了非活跃槽位！",
-                            detail = "但活跃槽位在刷写后并未切换。\n请切换活跃槽位或返回系统更新器完成OTA。\n除非你知道自己在做什么，否则不要从这里重启。",
-                            confirmText = "切换槽位",
-                            cancelText = "取消",
+                            title = stringResource(R.string.warning),
+                            message = stringResource(R.string.wrong_slot_title),
+                            detail = stringResource(R.string.wrong_slot_message),
+                            confirmText = stringResource(R.string.switch_slot),
+                            cancelText = stringResource(R.string.cancel),
                             onConfirm = {
                                 viewModel.hideCautionDialog()
                                 viewModel.switchSlot(context)
@@ -310,8 +364,12 @@ fun ColumnScope.SlotFlashContent(
                 val partitionName = viewModel.flashActionPartName ?: "unknown"
                 PartitionUtil.findPartitionBlockDevice(context, partitionName, slotSuffix)?.path ?: "$partitionName$slotSuffix"
             }
+            "flashImageNode" -> {
+                val nodeName = viewModel.flashActionPartName ?: "unknown"
+                PartitionUtil.findPartitionNode(nodeName)?.path ?: PartitionUtil.partitionNodePath(nodeName)
+            }
             "flashAk3", "flashAk3_mkbootfs" -> viewModel.boot.absolutePath
-            else -> "本机"
+            else -> stringResource(R.string.local_device)
         }
 
         val isAk3 = viewModel.flashActionType in listOf("flashAk3", "flashAk3_mkbootfs")
@@ -326,31 +384,40 @@ fun ColumnScope.SlotFlashContent(
             buildString {
                 val status = if (ak3Info.isCompatible) "✓" else "✗"
                 if (ak3Info.deviceNames.isNotEmpty()) {
-                    append("目标设备: ${ak3Info.deviceNames.joinToString(", ")} $status")
+                    append(stringResource(R.string.ak3_target_device, ak3Info.deviceNames.joinToString(", "), status))
                 } else {
-                    append("目标设备: Unknown $status")
+                    append(stringResource(R.string.ak3_target_device, stringResource(R.string.platform_unknown), status))
                 }
                 if (ak3Info.block.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("目标分区: ${ak3Info.block}")
+                    append(stringResource(R.string.ak3_target_partition, ak3Info.block))
                 }
                 if (ak3Info.kernelString.isNotEmpty()) {
                     if (isNotEmpty()) append("\n")
-                    append("内核标识: ${ak3Info.kernelString}")
+                    append(stringResource(R.string.ak3_kernel_string, ak3Info.kernelString))
                 }
                 if (isNotEmpty()) append("\n")
-                append("设备检查: ${if (ak3Info.doDeviceCheck) "开启" else "关闭"}")
+                append(
+                    stringResource(
+                        R.string.ak3_device_check,
+                        stringResource(if (ak3Info.doDeviceCheck) R.string.check_on else R.string.check_off)
+                    )
+                )
             }
         } else null
 
-        val title = "警告"
+        val title = stringResource(R.string.warning)
         val message = when (viewModel.flashActionType) {
-            "flashImage" -> "确定要将 $sourcePath 刷写到 $destPath 吗？"
-            "flashAk3" -> "确定要将 $sourcePath 刷写到 $destPath 吗？"
-            "flashAk3_mkbootfs" -> "确定要将 $sourcePath 以 mkbootfs 方式\n刷写到 $destPath 吗？"
-            else -> "确定要将 $sourcePath 刷写到本机吗？"
+            "flashImage", "flashImageNode" -> stringResource(R.string.confirm_flash_image, sourcePath, destPath)
+            "flashAk3" -> stringResource(R.string.confirm_flash_image, sourcePath, destPath)
+            "flashAk3_mkbootfs" -> stringResource(R.string.confirm_flash_mkbootfs, sourcePath, destPath)
+            else -> stringResource(R.string.confirm_flash_local, sourcePath)
         }
-        val confirmText = if (isAk3 && ak3Info != null && !ak3Info.isCompatible) "强行刷写（不兼容）" else "刷写"
+        val confirmText = if (isAk3 && ak3Info != null && !ak3Info.isCompatible) {
+            stringResource(R.string.force_flash_incompatible)
+        } else {
+            stringResource(R.string.flash_action)
+        }
         val cancelText = stringResource(R.string.cancel)
 
         AnimatedConfirmDialog(
@@ -363,7 +430,8 @@ fun ColumnScope.SlotFlashContent(
             onConfirm = {
                 viewModel.hideConfirmDialog()
                 val isOtherFlash = viewModel.flashActionType != "flashImage" && viewModel.flashActionURI != null
-                val isPartitionFlash = viewModel.flashActionType == "flashImage" && viewModel.flashActionPartName != null && viewModel.flashActionURI != null
+                val isPartitionFlash = viewModel.flashActionType in listOf("flashImage", "flashImageNode") &&
+                    viewModel.flashActionPartName != null && viewModel.flashActionURI != null
 
                 if (isOtherFlash || isPartitionFlash) {
                     val uri = viewModel.flashActionURI!!
@@ -387,6 +455,12 @@ fun ColumnScope.SlotFlashContent(
                                 popUpTo("slot$slotSuffix")
                             }
                             viewModel.flashImage(context, uri, partitionName!!)
+                        }
+                        "flashImageNode" -> {
+                            navController.navigate("slot$slotSuffix/flash/image/flash") {
+                                popUpTo("slot$slotSuffix")
+                            }
+                            viewModel.flashImageNode(context, uri, partitionName!!)
                         }
                     }
                     viewModel.flashActionType = ""

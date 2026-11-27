@@ -71,6 +71,9 @@ On the "Flashing" page, tap the "Flash" button to enter the flashing page:
 
 5. **Flash partition image**: After entering, you can see the preset partitions we provide: `boot`, `dtbo`, `init_boot`, `recovery`, `system_dlkm`, `vbmeta`, `vendor_boot`. Tap the partition you want to flash, select the corresponding `*.img` / `*.bin` file, and a confirmation dialog will pop up. Tap confirm to continue flashing.
 
+   **Show all partitions**: the "Show all partitions" button right under the page title scans the platform node directory (Qualcomm `/dev/block/bootdevice/by-name`, MediaTek `/dev/block/by-name`) and lists every partition that actually exists as a button; tapping one runs the same flashing flow. Tap "Switch to preset partition list" to go back.
+   Slot filtering: opened from slot A, partitions ending in `_b` are hidden; opened from slot B, partitions ending in `_a` are hidden; on A-only devices nothing is filtered.
+
    <a href="./pictures/7.png"><img src="./pictures/7.png" alt="Figure 7 · Flash Partition" width="300"></a>
 
 ---
@@ -118,7 +121,12 @@ Used to back up all partitions except `userdata` and `sdc`. Backup records are s
 
 - On entry, it automatically detects the platform, total partition count, skipped partitions, and estimated storage usage.
 - Default backup directory: `/sdcard/ReKernelFlasher/backups/{model}字库备份`. Supports a custom directory and "Reset Directory".
-- Tapping "Start Firmware Backup" shows a confirmation dialog. After confirming, the backup starts and shows success / skipped / failed counts when done.
+- After the scan finishes, the **info button (ⓘ)** to the right of "Start Firmware Backup" opens the scanned partition list, where each partition can be checked / unchecked with a single toggle button that flips between "Select all" and "Select none"; the button subtitle shows the selected count and estimated size.
+- Confirming "Start Firmware Backup" opens the log page. The top card is **Job info** (selected partition count + backup directory) and turns into **Backup result** (success / skipped / failed) in place when the backup finishes.
+- Two progress bars sit right below it: **total progress** (finished partitions / selected partitions) and **current partition progress** (bytes written / partition size).
+- Below the progress bars is the log: each finished partition prints `Backup 'init_boot' ==>[OK]` (or `==>[FAIL]`).
+- When done, `BPINFO.xml` (Backup Partition Information) is written into the backup directory: standard XML with each partition's name, source node path, img file name, size in bytes and SHA-256 hash.
+- After a successful backup a floating "Back to backup settings" button appears at the bottom of the page (it does not take layout space or interrupt scrolling).
 
 <a href="./pictures/12.png"><img src="./pictures/12.png" alt="Figure 12 · Firmware Backup" width="300"></a>
 

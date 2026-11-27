@@ -108,6 +108,7 @@ import safe.kernel.flash.ui.screens.autobackup.AutoBackupContent
 import safe.kernel.flash.ui.screens.autobackup.AutoBackupViewModel
 import safe.kernel.flash.ui.screens.backups.BackupsContent
 import safe.kernel.flash.ui.screens.backups.FullBackupContent
+import safe.kernel.flash.ui.screens.backups.FullBackupReturnButton
 import safe.kernel.flash.ui.screens.backups.SlotBackupsContent
 import safe.kernel.flash.ui.screens.error.ErrorScreen
 import safe.kernel.flash.ui.screens.history.HistoryContent
@@ -1054,7 +1055,13 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("toolbox/full_backup") {
                             backupsViewModel.clearCurrent()
-                            RefreshableScreen(mainViewModel, navController, swipeEnabled = false) {
+                            RefreshableScreen(
+                                mainViewModel,
+                                navController,
+                                swipeEnabled = false,
+                                bottomContentPadding = 96.dp,
+                                bottomOverlay = { FullBackupReturnButton(backupsViewModel) }
+                            ) {
                                 FullBackupContent(backupsViewModel, navController)
                             }
                         }

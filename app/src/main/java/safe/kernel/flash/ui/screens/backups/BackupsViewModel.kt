@@ -5,6 +5,8 @@ import android.os.Build
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
@@ -30,6 +32,8 @@ import com.topjohnwu.superuser.nio.ExtendedFile
 import com.topjohnwu.superuser.nio.FileSystemManager
 import kotlin.DeprecationLevel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -69,6 +73,15 @@ class BackupsViewModel(
             get() = backupPartitions.size
     }
 
+    /** BPINFO.xml 里的一条分区记录。 */
+    data class BpInfoEntry(
+        val name: String,
+        val sourcePath: String,
+        val fileName: String,
+        val sizeBytes: Long,
+        val hash: String
+    )
+
     private val _restoreOutput: SnapshotStateList<String> = mutableStateListOf()
     var currentBackup: String? = null
         set(value) {
@@ -99,6 +112,25 @@ class BackupsViewModel(
         private set
     var fullBackupFailCount by mutableLongStateOf(0L)
         private set
+    // 分区勾选（扫描完成后默认全选）
+    private val _fullBackupSelection: SnapshotStateMap<String, Boolean> = mutableStateMapOf()
+    // 备份进度
+    var fullBackupIsRunning by mutableStateOf(false)
+        private set
+    var fullBackupTotalCount by mutableIntStateOf(0)
+        private set
+    var fullBackupCompletedCount by mutableIntStateOf(0)
+        private set
+    var fullBackupCurrentPartition by mutableStateOf<String?>(null)
+        private set
+    var fullBackupCurrentProgress by mutableFloatStateOf(0f)
+        private set
+    var fullBackupCurrentCopiedBytes by mutableLongStateOf(0L)
+        private set
+    var fullBackupCurrentTotalBytes by mutableLongStateOf(0L)
+        private set
+    var fullBackupBpInfoPath by mutableStateOf<String?>(null)
+        private set
     private val hashAlgorithm: String = "SHA-256"
     @Deprecated("Backup migration will be removed in the first stable release", level = DeprecationLevel.WARNING)
     private var _needsMigration: MutableState<Boolean> = mutableStateOf(false)
@@ -107,6 +139,14 @@ class BackupsViewModel(
         get() = _restoreOutput
     val fullBackupOutput: List<String>
         get() = _fullBackupOutput
+    val fullBackupSelection: Map<String, Boolean>
+        get() = _fullBackupSelection
+    val fullBackupSelectedPartitions: List<FullBackupPartition>
+        get() = fullBackupSummary?.backupPartitions
+            ?.filter { _fullBackupSelection[it.name] == true }
+            .orEmpty()
+    val fullBackupSelectedBytes: Long
+        get() = fullBackupSelectedPartitions.sumOf { it.sizeBytes }
     val backupPartitions: MutableMap<String, Boolean>
         get() = _backupPartitions
     val isRefreshing: Boolean
@@ -285,11 +325,27 @@ class BackupsViewModel(
         fullBackupDirectory = path
     }
 
+    fun setFullBackupPartitionSelected(name: String, selected: Boolean) {
+        _fullBackupSelection[name] = selected
+    }
+
+    fun toggleFullBackupPartition(name: String) {
+        _fullBackupSelection[name] = _fullBackupSelection[name] != true
+    }
+
+    fun selectAllFullBackupPartitions() {
+        fullBackupSummary?.backupPartitions?.forEach { _fullBackupSelection[it.name] = true }
+    }
+
+    fun clearFullBackupSelection() {
+        fullBackupSummary?.backupPartitions?.forEach { _fullBackupSelection[it.name] = false }
+    }
+
     fun resetFullBackupDirectory() {
         fullBackupDirectory = defaultFullBackupDirectory()
     }
 
-    private fun defaultFullBackupDirectory(): String {
+    fun defaultFullBackupDirectory(): String {
         val model = sanitizeFileComponent(Build.MODEL.ifBlank { "unknown" })
         return "/sdcard/ReKernelFlasher/backups/${model}字库备份"
     }
@@ -333,11 +389,8 @@ class BackupsViewModel(
     }
 
     private fun detectFullBackupSource(): Pair<String, String>? {
-        return when {
-            fileSystemManager.getFile("/dev/block/bootdevice/by-name").exists() -> "高通" to "/dev/block/bootdevice/by-name"
-            fileSystemManager.getFile("/dev/block/by-name").exists() -> "联发科" to "/dev/block/by-name"
-            else -> null
-        }
+        // 与主页「设备平台」、刷写页「展示所有分区」共用同一套探测逻辑
+        return PartitionUtil.detectPlatformSource()
     }
 
     private fun readPartitionSize(sourceDir: String, partitionName: String): Long {
@@ -385,6 +438,17 @@ class BackupsViewModel(
                 estimatedBytes = estimatedBytes
             )
             fullBackupDirectory = normalizeFullBackupDirectory(fullBackupDirectory)
+            // 扫描完成后默认全选可备份分区
+            _fullBackupSelection.clear()
+            backupPartitions.forEach { _fullBackupSelection[it.name] = true }
+            fullBackupBpInfoPath = null
+            fullBackupIsRunning = false
+            fullBackupTotalCount = 0
+            fullBackupCompletedCount = 0
+            fullBackupCurrentPartition = null
+            fullBackupCurrentProgress = 0f
+            fullBackupCurrentCopiedBytes = 0L
+            fullBackupCurrentTotalBytes = 0L
         }
     }
 
@@ -402,7 +466,20 @@ class BackupsViewModel(
         fullBackupFailCount = 0L
     }
 
+    /** 从日志页返回备份设置页（重新扫描分区并恢复默认全选）。 */
+    fun returnToFullBackupSetup(context: Context) {
+        clearFullBackupOutput()
+        prepareFullBackup(context)
+    }
+
     fun startFullBackup(context: Context) {
+        val partitions = fullBackupSelectedPartitions
+        if (partitions.isEmpty()) {
+            viewModelScope.launch(Dispatchers.Main) {
+                Toast.makeText(context, "请先在分区列表中选择要备份的分区", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
         launch {
             val source = detectFullBackupSource()
             if (source == null) {
@@ -417,101 +494,163 @@ class BackupsViewModel(
             val (platform, sourceDir) = source
             val outDir = createUniqueDirectory(normalizeFullBackupDirectory(fullBackupDirectory))
             fullBackupDirectory = outDir
+            fileSystemManager.getFile(outDir).mkdirs()
+
             fullBackupWasSuccessful = null
             fullBackupSuccessCount = 0L
-            fullBackupSkipCount = 0L
+            fullBackupSkipCount = (fullBackupSummary?.skippedPartitions?.size ?: 0).toLong()
             fullBackupFailCount = 0L
+            fullBackupBpInfoPath = null
+            fullBackupIsRunning = true
+            fullBackupTotalCount = partitions.size
+            fullBackupCompletedCount = 0
+            fullBackupCurrentPartition = null
+            fullBackupCurrentProgress = 0f
+            fullBackupCurrentCopiedBytes = 0L
+            fullBackupCurrentTotalBytes = 0L
             _fullBackupOutput.clear()
-            val quotedSource = shellQuote(sourceDir)
-            val quotedOut = shellQuote(outDir)
-            val skipList = fullBackupSkipList.joinToString(" ")
-            val d = "\$"
-            val script = """
-                SRC_DIR=$quotedSource
-                OUT_DIR=$quotedOut
-                PLATFORM=$platform
-                SKIP_LIST="$skipList"
-                if [ "${d}(id -u)" != "0" ]; then
-                    echo "需要ROOT权限"
-                    exit 1
-                fi
-                if [ ! -d "${d}SRC_DIR" ]; then
-                    echo "不支持的平台"
-                    exit 1
-                fi
-                mkdir -p "${d}OUT_DIR" || { echo "无法创建目录 ${d}OUT_DIR"; exit 1; }
-                TOTAL=0
-                for p in ${d}(ls "${d}SRC_DIR" 2>/dev/null | sort); do
-                    TOTAL=${d}((TOTAL + 1))
-                done
-                COUNT=0
-                SKIP_COUNT=0
-                SUCCESS_COUNT=0
-                FAIL_COUNT=0
-                echo "=================================================="
-                echo "  字库备份脚本"
-                echo "  平台：${d}PLATFORM"
-                echo "  源路径：${d}SRC_DIR"
-                echo "  备份目录：${d}OUT_DIR"
-                echo "  跳过分区：${d}SKIP_LIST"
-                echo "  总分区数：${d}TOTAL"
-                echo "=================================================="
-                for part in ${d}(ls "${d}SRC_DIR" 2>/dev/null | sort); do
-                    COUNT=${d}((COUNT + 1))
-                    skip=0
-                    for s in ${d}SKIP_LIST; do
-                        [ "${d}part" = "${d}s" ] && skip=1 && break
-                    done
-                    if [ "${d}skip" -eq 1 ]; then
-                        echo "[${d}COUNT/${d}TOTAL] 跳过 ${d}part"
-                        SKIP_COUNT=${d}((SKIP_COUNT + 1))
-                        continue
-                    fi
-                    src="${d}SRC_DIR/${d}part"
-                    if [ ! -e "${d}src" ]; then
-                        echo "[${d}COUNT/${d}TOTAL] 跳过 ${d}part (不存在)"
-                        SKIP_COUNT=${d}((SKIP_COUNT + 1))
-                        continue
-                    fi
-                    dst="${d}OUT_DIR/${d}part.img"
-                    printf "[%d/%d] 备份 %s ..." "${d}COUNT" "${d}TOTAL" "${d}part"
-                    if dd if="${d}src" of="${d}dst" bs=4096 2>/dev/null; then
-                        echo " 成功"
-                        SUCCESS_COUNT=${d}((SUCCESS_COUNT + 1))
-                    else
-                        echo " 失败"
-                        rm -f "${d}dst"
-                        FAIL_COUNT=${d}((FAIL_COUNT + 1))
-                    fi
-                done
-                echo "=================================================="
-                echo "  备份完成"
-                echo "  成功：${d}SUCCESS_COUNT 个"
-                echo "  跳过：${d}SKIP_COUNT 个"
-                echo "  失败：${d}FAIL_COUNT 个"
-                echo "  文件保存在：${d}OUT_DIR"
-                echo "=================================================="
-                echo "RKF_RESULT success=${d}SUCCESS_COUNT skip=${d}SKIP_COUNT fail=${d}FAIL_COUNT"
-                [ "${d}FAIL_COUNT" -eq 0 ]
-            """.trimIndent()
-            val result = Shell.cmd("sh <<'RKF_FULL_BACKUP'\n$script\nRKF_FULL_BACKUP").exec()
-            result.out.forEach { line ->
-                if (line.startsWith("RKF_RESULT ")) {
-                    parseFullBackupResult(line)
-                } else {
-                    addFullBackupMessage(line)
+
+            listOf(
+                "==================================================",
+                "  字库备份",
+                "  平台：$platform",
+                "  源路径：$sourceDir",
+                "  备份目录：$outDir",
+                "  待备份分区：${partitions.size} 个（跳过 $fullBackupSkipCount 个）",
+                "=================================================="
+            ).forEach { addFullBackupMessage(it) }
+
+            val bpInfoEntries = mutableListOf<BpInfoEntry>()
+            try {
+                partitions.forEachIndexed { index, partition ->
+                    val srcPath = "$sourceDir/${partition.name}"
+                    val dstPath = "$outDir/${partition.name}.img"
+                    fullBackupCurrentPartition = partition.name
+                    fullBackupCurrentProgress = 0f
+                    fullBackupCurrentCopiedBytes = 0L
+                    fullBackupCurrentTotalBytes = partition.sizeBytes
+
+                    val copied = copyPartitionWithProgress(srcPath, dstPath, partition.sizeBytes)
+                    if (copied) {
+                        fullBackupCurrentProgress = 1f
+                        val sizeBytes = runCatching { fileSystemManager.getFile(dstPath).length() }
+                            .getOrDefault(partition.sizeBytes)
+                        val hash = sha256Of(context, dstPath)
+                        bpInfoEntries += BpInfoEntry(
+                            name = partition.name,
+                            sourcePath = srcPath,
+                            fileName = "${partition.name}.img",
+                            sizeBytes = sizeBytes,
+                            hash = hash
+                        )
+                        fullBackupSuccessCount += 1
+                        addFullBackupMessage("Backup '${partition.name}' ==>[OK]")
+                    } else {
+                        Shell.cmd("rm -f ${shellQuote(dstPath)}").exec()
+                        fullBackupFailCount += 1
+                        addFullBackupMessage("Backup '${partition.name}' ==>[FAIL]")
+                    }
+
+                    fullBackupCompletedCount = index + 1
+                    fullBackupCurrentProgress = 0f
+                    fullBackupCurrentCopiedBytes = 0L
+                    fullBackupCurrentTotalBytes = 0L
                 }
-            }
-            result.err.forEach { addFullBackupMessage(it) }
-            fullBackupWasSuccessful = result.isSuccess && fullBackupFailCount == 0L
-            if (fullBackupWasSuccessful == true) {
-                writeFullBackupRecord(outDir, platform)
-            }
-            HistoryManager.record(HistoryEntry.create("字库备份 -> $outDir，成功 ${fullBackupSuccessCount}，跳过 ${fullBackupSkipCount}，失败 ${fullBackupFailCount}"))
-            if (fullBackupWasSuccessful != true) {
-                log(context, "字库备份完成，但有 ${fullBackupFailCount} 个失败")
+
+                val bpInfoPath = writeBpInfo(outDir, platform, sourceDir, bpInfoEntries)
+                fullBackupBpInfoPath = bpInfoPath
+                addFullBackupMessage("==================================================")
+                addFullBackupMessage("  备份完成")
+                addFullBackupMessage("  成功：$fullBackupSuccessCount 个")
+                addFullBackupMessage("  跳过：$fullBackupSkipCount 个")
+                addFullBackupMessage("  失败：$fullBackupFailCount 个")
+                addFullBackupMessage("  分区信息：$bpInfoPath")
+                addFullBackupMessage("  文件保存在：$outDir")
+                addFullBackupMessage("==================================================")
+
+                fullBackupWasSuccessful = fullBackupFailCount == 0L && bpInfoEntries.isNotEmpty()
+                if (bpInfoEntries.isNotEmpty()) {
+                    writeFullBackupRecord(outDir, platform)
+                }
+                HistoryManager.record(
+                    HistoryEntry.create(
+                        "字库备份 -> $outDir，成功 $fullBackupSuccessCount，跳过 $fullBackupSkipCount，失败 $fullBackupFailCount"
+                    )
+                )
+                if (fullBackupWasSuccessful != true) {
+                    log(context, "字库备份完成，但有 $fullBackupFailCount 个失败")
+                }
+            } finally {
+                fullBackupIsRunning = false
+                fullBackupCurrentPartition = null
+                fullBackupCurrentProgress = 0f
+                fullBackupCurrentCopiedBytes = 0L
+                fullBackupCurrentTotalBytes = 0L
             }
         }
+    }
+
+    /** dd 复制单个分区，并在复制过程中轮询目标文件大小以驱动分进度条。 */
+    private suspend fun copyPartitionWithProgress(
+        srcPath: String,
+        dstPath: String,
+        totalBytes: Long
+    ): Boolean = withContext(Dispatchers.IO) {
+        val dstFile = fileSystemManager.getFile(dstPath)
+        val job = async(Dispatchers.IO) {
+            Shell.cmd(
+                "dd if=${shellQuote(srcPath)} of=${shellQuote(dstPath)} bs=4096 2>/dev/null && sync"
+            ).exec().isSuccess
+        }
+        while (!job.isCompleted) {
+            val copiedBytes = runCatching { dstFile.length() }.getOrDefault(0L)
+            withContext(Dispatchers.Main) {
+                fullBackupCurrentCopiedBytes = copiedBytes
+                fullBackupCurrentProgress = if (totalBytes > 0L) {
+                    (copiedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+            }
+            delay(200)
+        }
+        job.await()
+    }
+
+    /** 优先用系统 sha256sum，缺失时回退到应用自带的 busybox。 */
+    private fun sha256Of(context: Context, path: String): String {
+        val quoted = shellQuote(path)
+        val busybox = File(context.filesDir, "busybox").absolutePath
+        val output = Shell.cmd(
+            "sha256sum $quoted 2>/dev/null || ${shellQuote(busybox)} sha256sum $quoted 2>/dev/null"
+        ).exec().out.firstOrNull()?.trim().orEmpty()
+        return output.substringBefore(' ').lowercase()
+    }
+
+    /**
+     * 在备份目录生成 BPINFO.xml（Backup Partition Information），
+     * 记录每个分区的分区名 / 源备份节点路径 / img 文件名 / 大小（字节）/ 哈希。
+     */
+    private fun writeBpInfo(
+        outDir: String,
+        platform: String,
+        sourceDir: String,
+        entries: List<BpInfoEntry>
+    ): String {
+        val xml = BpInfoWriter.build(
+            device = Build.MODEL,
+            platform = platform,
+            sourceDir = sourceDir,
+            backupDir = outDir,
+            createdAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")),
+            hashAlgorithm = hashAlgorithm,
+            entries = entries
+        )
+        fileSystemManager.getFile(outDir)
+            .getChildFile(BpInfoWriter.FILE_NAME)
+            .outputStream()
+            .use { it.write(xml.toByteArray(Charsets.UTF_8)) }
+        return "$outDir/${BpInfoWriter.FILE_NAME}"
     }
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -533,19 +672,6 @@ class BackupsViewModel(
         val indentedJson = Json { prettyPrint = true }
         jsonFile.outputStream().use { it.write(indentedJson.encodeToString(backup).toByteArray(Charsets.UTF_8)) }
         _backups[backupName] = backup
-    }
-
-    private fun parseFullBackupResult(line: String) {
-        val values = line.removePrefix("RKF_RESULT ")
-            .split(' ')
-            .mapNotNull {
-                val parts = it.split('=', limit = 2)
-                if (parts.size == 2) parts[0] to (parts[1].toLongOrNull() ?: 0L) else null
-            }
-            .toMap()
-        fullBackupSuccessCount = values["success"] ?: 0L
-        fullBackupSkipCount = values["skip"] ?: 0L
-        fullBackupFailCount = values["fail"] ?: 0L
     }
 
     @OptIn(ExperimentalSerializationApi::class)

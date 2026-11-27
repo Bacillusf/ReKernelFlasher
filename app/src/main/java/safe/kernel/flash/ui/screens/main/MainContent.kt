@@ -1,9 +1,14 @@
 package safe.kernel.flash.ui.screens.main
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.serialization.ExperimentalSerializationApi
 import safe.kernel.flash.R
+import safe.kernel.flash.common.PartitionUtil
 import safe.kernel.flash.ui.components.Card
 import safe.kernel.flash.ui.components.DataCard
 import safe.kernel.flash.ui.components.DataRow
@@ -60,6 +67,15 @@ fun ColumnScope.MainContent(
 ) {
     AnimatedVisibility(viewModel.updateAvailable) {
         UpdateBanner(viewModel)
+    }
+
+    val context = LocalContext.current
+    val kernelVersionText = viewModel.kernelVersion.ifBlank { "Kernel version unavailable" }
+    val kernelVersionCopiedText = stringResource(R.string.kernel_version_copied)
+    val copyKernelVersion = {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText("kernel_version", kernelVersionText))
+        Toast.makeText(context, kernelVersionCopiedText, Toast.LENGTH_SHORT).show()
     }
 
     RootStatusPanel(viewModel)
@@ -89,6 +105,17 @@ fun ColumnScope.MainContent(
     DataCard(title = stringResource(R.string.device)) {
         val cardWidth = remember { mutableIntStateOf(0) }
         DataRow(stringResource(R.string.model), "${Build.MODEL} (${Build.DEVICE})", mutableMaxWidth = cardWidth)
+        DataRow(
+            stringResource(R.string.platform),
+            stringResource(
+                when (viewModel.platform) {
+                    PartitionUtil.PlatformKind.QUALCOMM -> R.string.platform_qualcomm
+                    PartitionUtil.PlatformKind.MEDIATEK -> R.string.platform_mediatek
+                    null -> R.string.platform_unknown
+                }
+            ),
+            mutableMaxWidth = cardWidth
+        )
         DataRow(stringResource(R.string.build_number), Build.ID, mutableMaxWidth = cardWidth)
         DataRow(stringResource(R.string.app_version), viewModel.appVersion, mutableMaxWidth = cardWidth)
         if (viewModel.isAb) DataRow(stringResource(R.string.slot_suffix), viewModel.slotSuffix, mutableMaxWidth = cardWidth)
@@ -100,6 +127,7 @@ fun ColumnScope.MainContent(
     Spacer(Modifier.height(12.dp))
 
     Card(
+        modifier = Modifier.clickable(onClick = copyKernelVersion),
         shape = RoundedCornerShape(24.dp),
         backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.64f)),
@@ -127,7 +155,7 @@ fun ColumnScope.MainContent(
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    text = viewModel.kernelVersion.ifBlank { "Kernel version unavailable" },
+                    text = kernelVersionText,
                     style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,

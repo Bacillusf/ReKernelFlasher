@@ -55,6 +55,7 @@ fun RefreshableScreen(
     swipeEnabled: Boolean = false,
     bottomContentPadding: Dp = 16.dp,
     actions: @Composable RowScope.() -> Unit = {},
+    bottomOverlay: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     val statusBar = WindowInsets.statusBars.only(WindowInsetsSides.Top).asPaddingValues()
@@ -137,5 +138,15 @@ fun RefreshableScreen(
             contentColor = MaterialTheme.colorScheme.primary,
             scale = true
         )
+
+        // 悬浮在页面底部的操作区（不参与滚动、不占据内容高度）
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = navigationBars.calculateBottomPadding())
+        ) {
+            bottomOverlay()
+        }
     }
 }
